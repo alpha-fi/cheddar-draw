@@ -1,42 +1,23 @@
+use std::convert::TryInto;
+
 use crate::*;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId};
 
-pub const PIXEL_COST: Balance = 1_000_000_000_000_000_000;
-pub const ONE_NEAR: Balance = 1_000_000_000_000_000_000_000_000;
-pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / PIXEL_COST / 250;
+pub const ONE_NEAR: Balance =   1_000_000_000_000_000_000_000_000;
+// TOOD: adjust
+pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / 200;
 pub const MIN_AMOUNT_FOR_DISCOUNT: Balance = 5 * ONE_NEAR;
 pub const PIXEL_TOKEN_PRICE_WITH_DISCOUNT: Balance = PIXEL_TOKEN_PRICE * 5 / 6;
-pub const DEFAULT_AVOCADO_BALANCE: Balance = 25 * PIXEL_COST;
-pub const DEFAULT_BANANA_BALANCE: Balance = 0;
-/// Current reward is 1 pixel per day per pixel.
-pub const REWARD_PER_PIXEL_PER_NANOSEC: Balance = PIXEL_COST / (24 * 60 * 60 * 1_000_000_000);
+pub const DEFAULT_CREAM_BALANCE: u32 = 2;
+pub const DEFAULT_CHEDDAR_BALANCE: Balance = 0;
+/// Current reward is 1 cheddar per day per pixel.
+/// TODO: adjust
+pub const REWARD_PER_PIXEL_PER_NANOSEC: Balance = ONE_NEAR / (24 * 60 * 60);
 
 pub type AccountIndex = u32;
-
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct AccountVersionAvocado {
-    pub account_id: AccountId,
-    pub account_index: AccountIndex,
-    pub balance: u128,
-    pub num_pixels: u32,
-    pub claim_timestamp: u64,
-}
-
-impl From<AccountVersionAvocado> for Account {
-    fn from(account: AccountVersionAvocado) -> Self {
-        Self {
-            account_id: account.account_id,
-            account_index: account.account_index,
-            balances: vec![account.balance, 0],
-            num_pixels: account.num_pixels,
-            claim_timestamp: account.claim_timestamp,
-            farming_preference: Berry::Avocado,
-        }
-    }
-}
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum UpgradableAccount {
@@ -61,10 +42,10 @@ impl From<Account> for UpgradableAccount {
 pub struct Account {
     pub account_id: AccountId,
     pub account_index: AccountIndex,
+    // farmed tokens balance [avocados, bananas]
     pub balances: Vec<Balance>,
     pub num_pixels: u32,
     pub claim_timestamp: u64,
-    pub farming_preference: Berry,
 }
 
 #[derive(Serialize)]
@@ -75,7 +56,6 @@ pub struct HumanAccount {
     pub avocado_balance: U128,
     pub banana_balance: U128,
     pub num_pixels: u32,
-    pub farming_preference: Berry,
 }
 
 impl From<Account> for HumanAccount {
@@ -83,10 +63,9 @@ impl From<Account> for HumanAccount {
         Self {
             account_id: account.account_id,
             account_index: account.account_index,
-            avocado_balance: account.balances[Berry::Avocado as usize].into(),
-            banana_balance: account.balances[Berry::Banana as usize].into(),
+            avocado_balance: account.balances[Berry::Cream as usize].into(),
+            banana_balance: account.balances[Berry::Cheddar as usize].into(),
             num_pixels: account.num_pixels,
-            farming_preference: account.farming_preference,
         }
     }
 }
@@ -96,10 +75,9 @@ impl Account {
         Self {
             account_id,
             account_index,
-            balances: vec![DEFAULT_AVOCADO_BALANCE, DEFAULT_BANANA_BALANCE],
+            balances: vec![DEFAULT_CREAM_BALANCE.into(), DEFAULT_CHEDDAR_BALANCE],
             num_pixels: 0,
             claim_timestamp: env::block_timestamp(),
-            farming_preference: Berry::Avocado,
         }
     }
 
@@ -110,38 +88,34 @@ impl Account {
         } else {
             near_amount / PIXEL_TOKEN_PRICE
         };
+        let near_int = near_amount / ONE_NEAR;
         env::log(
             format!(
-                "Purchased {}.{:03} Avocado tokens for {}.{:03} NEAR",
-                amount / PIXEL_COST,
-                (amount - amount / PIXEL_COST * PIXEL_COST) / (PIXEL_COST / 1000),
-                near_amount / ONE_NEAR,
-                (near_amount - near_amount / ONE_NEAR * ONE_NEAR) / (ONE_NEAR / 1000),
+                "Purchased {} Cream tokens for {}.{:03} NEAR",
+                amount,
+                near_int,
+                (near_amount - near_int * ONE_NEAR) / (ONE_NEAR / 1000),
             )
             .as_bytes(),
         );
-        self.balances[Berry::Avocado as usize] += amount;
+        self.balances[Berry::Cream as usize] += amount;
         amount
     }
 
-    pub fn touch(&mut self) -> (Berry, Balance) {
+    /// Updates the account balance, returns number of farmed tokens.
+    pub fn touch(&mut self) -> Balance {
         let block_timestamp = env::block_timestamp();
         let time_diff = block_timestamp - self.claim_timestamp;
-        let farm_bonus = if self.farming_preference == Berry::Avocado {
-            1
-        } else {
-            0
-        };
-        let farmed = Balance::from(self.num_pixels + farm_bonus)
+        let farmed = Balance::from(self.num_pixels)
             * Balance::from(time_diff)
             * REWARD_PER_PIXEL_PER_NANOSEC;
         self.claim_timestamp = block_timestamp;
-        self.balances[self.farming_preference as usize] += farmed;
-        (self.farming_preference, farmed)
+        self.balances[Berry::Cheddar as usize] += farmed;
+        farmed
     }
 
     pub fn charge(&mut self, berry: Berry, num_pixels: u32) -> Balance {
-        let cost = Balance::from(num_pixels) * PIXEL_COST;
+        let cost = Balance::from(num_pixels);
         assert!(
             self.balances[berry as usize] >= cost,
             "Not enough balance to draw pixels"
@@ -170,17 +144,13 @@ impl Place {
         self.accounts
             .get(&account_index)
             .map(|account| account.into())
-            .or_else(|| {
-                self.legacy_accounts
-                    .get(u64::from(account_index))
-                    .map(|legacy_account| legacy_account.into())
-            })
     }
 
+    /// Updates account state & farmed balance
     pub fn touch(&mut self, account: &mut Account) {
-        let (berry, farmed) = account.touch();
+        let farmed = account.touch();
         if farmed > 0 {
-            self.farmed_balances[berry as usize] += farmed;
+            self.farmed_balances[Berry::Cheddar as usize] += farmed;
         }
     }
 
@@ -206,8 +176,8 @@ impl Place {
 
 #[near_bindgen]
 impl Place {
-    pub fn get_pixel_cost(&self) -> U128 {
-        PIXEL_COST.into()
+    pub fn get_pixel_cost(&self) -> u32 {
+        1
     }
 
     pub fn get_account_by_index(&self, account_index: AccountIndex) -> Option<HumanAccount> {
@@ -226,14 +196,13 @@ impl Place {
             })
     }
 
-    pub fn get_account_balance(&self, account_id: ValidAccountId) -> U128 {
-        self.get_internal_account_by_id(account_id.as_ref())
-            .map(|mut account| {
-                account.touch();
-                account.balances[Berry::Avocado as usize]
-            })
-            .unwrap_or(DEFAULT_AVOCADO_BALANCE)
-            .into()
+    // returns amount of Cream tokens
+    pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
+        if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
+            a.touch();
+            return a.balances[Berry::Cream as usize].try_into().unwrap()
+        }
+        return DEFAULT_CREAM_BALANCE;
     }
 
     pub fn get_account_num_pixels(&self, account_id: ValidAccountId) -> u32 {

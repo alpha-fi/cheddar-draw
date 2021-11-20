@@ -1,22 +1,19 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, Vector};
+use near_sdk::collections::{LookupMap};
 use near_sdk::json_types::{ValidAccountId, U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise};
+use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, Gas};
 
 /// Price per 1 byte of storage from mainnet genesis config.
 const STORAGE_PRICE_PER_BYTE: Balance = 100_000_000_000_000_000_000;
+/// Basic compute.
+pub(crate) const GAS_BASE_COMPUTE: Gas = 5_000_000_000_000;
 
 const SAFETY_BAR: Balance = 50_000000_000000_000000_000000;
 
-const FARM_START_TIME: u64 = 1606019138008904777;
-const REWARD_PERIOD: u64 = 60 * 1_000_000_000;
+const FARM_START_TIME: u64 = 1637442000_000_000_000;
+const REWARD_PERIOD: u64 = 60 * 1_000_000_000; // 60s
 const PORTION_OF_REWARDS: Balance = 24 * 60;
-
-const FREE_SATS_DAY_MS: u64 = 1620518400000;
-const ONE_DAY_MS: u64 = 24 * 60 * 60 * 1000;
-
-const FARM_CONTRACT_ID_PREFIX: &str = "farm";
 
 pub mod account;
 pub use crate::account::*;
@@ -28,14 +25,11 @@ mod fungible_token_core;
 mod fungible_token_metadata;
 mod fungible_token_storage;
 mod internal;
-pub mod token;
 
 pub use crate::fungible_token_core::*;
 pub use crate::fungible_token_metadata::*;
 pub use crate::fungible_token_storage::*;
 use crate::internal::*;
-
-pub use crate::token::*;
 
 #[global_allocator]
 static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc::INIT;
@@ -43,28 +37,23 @@ static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc:
 #[derive(BorshDeserialize, BorshSerialize, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub enum Berry {
-    Avocado,
-    Banana,
+    Cream,
+    Cheddar,
 }
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Place {
     pub account_indices: LookupMap<AccountId, u32>,
-    pub board: board::PixelBoard,
-    pub legacy_accounts: Vector<AccountVersionAvocado>,
-    pub last_reward_timestamp: u64,
-    pub num_accounts: u32,
     pub accounts: LookupMap<u32, UpgradableAccount>,
+    pub num_accounts: u32,
+    pub board: board::PixelBoard,
+    pub last_reward_timestamp: u64,
     pub bought_balances: Vec<Balance>,
     pub burned_balances: Vec<Balance>,
     pub farmed_balances: Vec<Balance>,
 
-    // NEP#122 Token parts
-    /// Vaults that currently exist for the transactions in flight.
-    pub vaults: LookupMap<VaultId, Vault>,
-    /// The next vault ID to use.
-    pub next_vault_id: VaultId,
+    pub cheddar: AccountId
 }
 
 impl Default for Place {
@@ -76,20 +65,18 @@ impl Default for Place {
 #[near_bindgen]
 impl Place {
     #[init]
-    pub fn new() -> Self {
+    pub fn new(cheddar: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
-            board: PixelBoard::new(),
-            legacy_accounts: Vector::new(b"a".to_vec()),
-            num_accounts: 0,
             accounts: LookupMap::new(b"u".to_vec()),
+            num_accounts: 0,
+            board: PixelBoard::new(),
             last_reward_timestamp: env::block_timestamp(),
             bought_balances: vec![0, 0],
             burned_balances: vec![0, 0],
             farmed_balances: vec![0, 0],
-            vaults: LookupMap::new(b"v".to_vec()),
-            next_vault_id: VaultId(0),
+            cheddar: cheddar.into(),
         };
 
         let mut account = Account::new(env::current_account_id(), 0);
@@ -113,19 +100,7 @@ impl Place {
         let mut account = self.get_mut_account(env::predecessor_account_id());
         let minted_amount = account.buy_tokens(env::attached_deposit());
         self.save_account(account);
-        self.bought_balances[Berry::Avocado as usize] += minted_amount;
-    }
-
-    pub fn select_farming_preference(&mut self, berry: Berry) {
-        let mut account = self.get_mut_account(env::predecessor_account_id());
-        account.farming_preference = berry;
-        self.save_account(account);
-    }
-
-    pub fn get_free_drawing_timestamp(&self) -> u64 {
-        let time_ms = ms_time();
-        let week_offset_ms = (time_ms - FREE_SATS_DAY_MS) % (7 * ONE_DAY_MS);
-        time_ms - week_offset_ms + ONE_DAY_MS * 6
+        self.bought_balances[Berry::Cream as usize] += minted_amount;
     }
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
@@ -134,10 +109,8 @@ impl Place {
         }
         let mut account = self.get_mut_account(env::predecessor_account_id());
         let new_pixels = pixels.len() as u32;
-        if ms_time() < self.get_free_drawing_timestamp() {
-            let cost = account.charge(Berry::Avocado, new_pixels);
-            self.burned_balances[Berry::Avocado as usize] += cost;
-        }
+        let cost = account.charge(Berry::Cream, new_pixels);
+        self.burned_balances[Berry::Cream as usize] += cost;
 
         let mut old_owners = self.board.set_pixels(account.account_index, &pixels);
         let replaced_pixels = old_owners.remove(&account.account_index).unwrap_or(0);
@@ -189,11 +162,8 @@ impl Place {
         self.last_reward_timestamp = current_time;
         let reward: Balance = self.get_expected_reward().into();
         env::log(format!("Distributed reward of {}", reward).as_bytes());
-        Promise::new(format!(
-            "{}.{}",
-            FARM_CONTRACT_ID_PREFIX,
-            env::current_account_id()
-        ))
+        // TODO: farm cheddar here!
+        Promise::new(self.cheddar.clone())
         .function_call(
             b"take_my_near".to_vec(),
             b"{}".to_vec(),
@@ -206,6 +176,8 @@ impl Place {
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use super::*;
 
     use near_sdk::{testing_env, MockedBlockchain, VMContext};
@@ -235,11 +207,11 @@ mod tests {
     fn test_new() {
         let mut context = get_context(3_600_000_000_000, false);
         testing_env!(context.clone());
-        let contract = Place::new();
+        let contract = Place::new("token.cheddar.near".try_into().unwrap());
 
         context.is_view = true;
         testing_env!(context.clone());
-        assert_eq!(contract.get_pixel_cost().0, PIXEL_COST);
+        assert_eq!(contract.get_pixel_cost(), 1);
         assert_eq!(
             contract.get_line_versions(),
             vec![0u32; BOARD_HEIGHT as usize]

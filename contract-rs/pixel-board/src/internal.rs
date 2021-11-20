@@ -8,10 +8,6 @@ pub(crate) fn assert_one_yocto() {
     )
 }
 
-pub(crate) fn ms_time() -> u64 {
-    env::block_timestamp() / 1_000_000
-}
-
 pub(crate) fn assert_self() {
     assert_eq!(
         env::predecessor_account_id(),
@@ -23,10 +19,10 @@ pub(crate) fn assert_self() {
 impl Place {
     pub(crate) fn internal_deposit(&mut self, account_id: &AccountId, amount: Balance) {
         let mut account = self.get_mut_account(account_id.clone());
-        let balance = account.balances[Berry::Banana as usize];
+        let balance = account.balances[Berry::Cheddar as usize];
 
         if let Some(new_balance) = balance.checked_add(amount) {
-            account.balances[Berry::Banana as usize] = new_balance;
+            account.balances[Berry::Cheddar as usize] = new_balance;
             self.save_account(account);
         } else {
             env::panic(b"Balance overflow");
@@ -35,10 +31,10 @@ impl Place {
 
     pub(crate) fn internal_withdraw(&mut self, account_id: &AccountId, amount: Balance) {
         let mut account = self.get_mut_account(account_id.clone());
-        let balance = account.balances[Berry::Banana as usize];
+        let balance = account.balances[Berry::Cheddar as usize];
 
         if let Some(new_balance) = balance.checked_sub(amount) {
-            account.balances[Berry::Banana as usize] = new_balance;
+            account.balances[Berry::Cheddar as usize] = new_balance;
             self.save_account(account);
         } else {
             env::panic(b"The account doesn't have enough balance");

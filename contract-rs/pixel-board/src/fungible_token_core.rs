@@ -142,14 +142,15 @@ impl FungibleTokenCore for Place {
     }
 
     fn ft_total_supply(&self) -> U128 {
-        self.farmed_balances[Berry::Banana as usize].into()
+        self.farmed_balances[Berry::Cheddar as usize].into()
     }
 
+    /// balance of farmed Cheddar
     fn ft_balance_of(&self, account_id: ValidAccountId) -> U128 {
         self.get_internal_account_by_id(account_id.as_ref())
             .map(|mut account| {
                 account.touch();
-                account.balances[Berry::Banana as usize]
+                account.balances[Berry::Cheddar as usize]
             })
             .unwrap_or(0)
             .into()
@@ -182,14 +183,14 @@ impl FungibleTokenResolver for Place {
 
         if unused_amount > 0 {
             let mut receiver = self.get_mut_account(receiver_id.clone());
-            let receiver_balance = receiver.balances[Berry::Banana as usize];
+            let receiver_balance = receiver.balances[Berry::Cheddar as usize];
             if receiver_balance > 0 {
                 let refund_amount = std::cmp::min(receiver_balance, unused_amount);
-                receiver.balances[Berry::Banana as usize] -= refund_amount;
+                receiver.balances[Berry::Cheddar as usize] -= refund_amount;
                 self.save_account(receiver);
 
                 let mut sender = self.get_mut_account(sender_id.clone());
-                sender.balances[Berry::Banana as usize] += refund_amount;
+                sender.balances[Berry::Cheddar as usize] += refund_amount;
                 self.save_account(sender);
 
                 env::log(
