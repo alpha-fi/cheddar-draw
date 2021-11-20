@@ -1,19 +1,20 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap};
+use near_sdk::collections::LookupMap;
 use near_sdk::json_types::{ValidAccountId, U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, Gas};
+use near_sdk::{env, near_bindgen, AccountId, Balance, Gas, Promise};
 
 /// Price per 1 byte of storage from mainnet genesis config.
 const STORAGE_PRICE_PER_BYTE: Balance = 100_000_000_000_000_000_000;
 /// Basic compute.
-pub(crate) const GAS_BASE_COMPUTE: Gas = 5_000_000_000_000;
+pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
+const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
+const NO_DEPOSIT: Balance = 0;
 
-const SAFETY_BAR: Balance = 50_000000_000000_000000_000000;
+const SAFETY_BAR: Balance = 40_000000_000000_000000_000000; // 40 NEAR
 
 const FARM_START_TIME: u64 = 1637442000_000_000_000;
 const REWARD_PERIOD: u64 = 60 * 1_000_000_000; // 60s
-const PORTION_OF_REWARDS: Balance = 24 * 60;
 
 pub mod account;
 pub use crate::account::*;
@@ -21,13 +22,10 @@ pub use crate::account::*;
 pub mod board;
 pub use crate::board::*;
 
-mod fungible_token_core;
-mod fungible_token_metadata;
 mod fungible_token_storage;
 mod internal;
+mod minter;
 
-pub use crate::fungible_token_core::*;
-pub use crate::fungible_token_metadata::*;
 pub use crate::fungible_token_storage::*;
 use crate::internal::*;
 
@@ -53,7 +51,7 @@ pub struct Place {
     pub burned_balances: Vec<Balance>,
     pub farmed_balances: Vec<Balance>,
 
-    pub cheddar: AccountId
+    pub cheddar: AccountId,
 }
 
 impl Default for Place {
@@ -87,7 +85,7 @@ impl Place {
     }
 
     pub fn register_account(&mut self) {
-        let account = self.get_mut_account(env::predecessor_account_id());
+        let account = self.get_mut_account(&env::predecessor_account_id());
         self.save_account(account);
     }
 
@@ -97,8 +95,14 @@ impl Place {
 
     #[payable]
     pub fn buy_tokens(&mut self) {
-        let mut account = self.get_mut_account(env::predecessor_account_id());
-        let minted_amount = account.buy_tokens(env::attached_deposit());
+        let near_amount = env::attached_deposit();
+        assert!(
+            near_amount >= ONE_NEAR / 10,
+            "Min 0.1 NEAR payment is required"
+        );
+
+        let mut account = self.get_mut_account(&env::predecessor_account_id());
+        let minted_amount = account.buy_tokens(near_amount);
         self.save_account(account);
         self.bought_balances[Berry::Cream as usize] += minted_amount;
     }
@@ -107,7 +111,7 @@ impl Place {
         if pixels.is_empty() {
             return;
         }
-        let mut account = self.get_mut_account(env::predecessor_account_id());
+        let mut account = self.get_mut_account(&env::predecessor_account_id());
         let new_pixels = pixels.len() as u32;
         let cost = account.charge(Berry::Cream, new_pixels);
         self.burned_balances[Berry::Cream as usize] += cost;
@@ -123,8 +127,40 @@ impl Place {
             account.num_pixels -= num_pixels;
             self.save_account(account);
         }
+    }
 
-        self.maybe_send_reward();
+    pub fn withdraw_crop(&mut self) {
+        let recipient = env::predecessor_account_id();
+
+        let mut account = self
+            .get_internal_account_by_id(&recipient)
+            .expect("account not found");
+        self.touch(&mut account);
+
+        let balance = account.balances[Berry::Cheddar as usize];
+        let mint_funded = account.mint_funded;
+
+        assert!(balance > 0, "zero balance");
+        account.balances[Berry::Cheddar as usize] = 0;
+        account.mint_funded = true;
+        self.save_account(account);
+        let bal_str: U128 = balance.into();
+
+        minter::ext_minter::ft_mint(
+            recipient.clone(),
+            bal_str.clone(),
+            Some("cheddar draw reward".to_string()),
+            &self.cheddar,
+            if mint_funded { 1 } else { ONE_NEAR / 50 },
+            GAS_FOR_FT_MINT,
+        )
+        .then(minter::ext_self::mint_callback(
+            recipient,
+            bal_str,
+            &env::current_account_id(),
+            NO_DEPOSIT,
+            GAS_FOR_RESOLVE_MINT,
+        ));
     }
 
     pub fn get_num_accounts(&self) -> u32 {
@@ -139,7 +175,7 @@ impl Place {
         core::cmp::max(FARM_START_TIME, self.last_reward_timestamp + REWARD_PERIOD).into()
     }
 
-    pub fn get_expected_reward(&self) -> U128 {
+    pub fn withdraw_near(&self) -> U128 {
         let account_balance = env::account_balance();
         let storage_usage = env::storage_usage();
         let locked_for_storage = Balance::from(storage_usage) * STORAGE_PRICE_PER_BYTE + SAFETY_BAR;
@@ -147,29 +183,8 @@ impl Place {
             return 0.into();
         }
         let liquid_balance = account_balance - locked_for_storage;
-        let reward = liquid_balance / PORTION_OF_REWARDS;
-        reward.into()
-    }
-}
-
-impl Place {
-    fn maybe_send_reward(&mut self) {
-        let current_time = env::block_timestamp();
-        let next_reward_timestamp: u64 = self.get_next_reward_timestamp().into();
-        if next_reward_timestamp > current_time {
-            return;
-        }
-        self.last_reward_timestamp = current_time;
-        let reward: Balance = self.get_expected_reward().into();
-        env::log(format!("Distributed reward of {}", reward).as_bytes());
-        // TODO: farm cheddar here!
-        Promise::new(self.cheddar.clone())
-        .function_call(
-            b"take_my_near".to_vec(),
-            b"{}".to_vec(),
-            reward,
-            GAS_BASE_COMPUTE,
-        );
+        // TODO: withdraw
+        return liquid_balance.into();
     }
 }
 

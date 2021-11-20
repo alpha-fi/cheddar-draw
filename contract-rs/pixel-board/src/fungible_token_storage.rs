@@ -23,7 +23,7 @@ impl StorageManagement for Place {
         let refund_amount = if self.account_indices.contains_key(&account_id) {
             attached_deposit
         } else {
-            let account = self.get_mut_account(account_id.clone());
+            let account = self.get_mut_account(&account_id);
             self.save_account(account);
             let amount = self.storage_balance_bounds().min.0;
             assert!(attached_deposit >= amount);

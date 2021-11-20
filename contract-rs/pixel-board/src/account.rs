@@ -6,7 +6,7 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId};
 
-pub const ONE_NEAR: Balance =   1_000_000_000_000_000_000_000_000;
+pub const ONE_NEAR: Balance = 1_000_000_000_000_000_000_000_000;
 // TOOD: adjust
 pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / 200;
 pub const MIN_AMOUNT_FOR_DISCOUNT: Balance = 5 * ONE_NEAR;
@@ -14,8 +14,8 @@ pub const PIXEL_TOKEN_PRICE_WITH_DISCOUNT: Balance = PIXEL_TOKEN_PRICE * 5 / 6;
 pub const DEFAULT_CREAM_BALANCE: u32 = 2;
 pub const DEFAULT_CHEDDAR_BALANCE: Balance = 0;
 /// Current reward is 1 cheddar per day per pixel.
-/// TODO: adjust
-pub const REWARD_PER_PIXEL_PER_NANOSEC: Balance = ONE_NEAR / (24 * 60 * 60);
+/// TODO: adjust -- will also need to adjust PORTION_OF_REWARDS
+pub const REWARD_PER_PIXEL_PER_NANOSEC: Balance = ONE_NEAR / (24 * 60 * 60 * 1_000_000_000);
 
 pub type AccountIndex = u32;
 
@@ -46,6 +46,7 @@ pub struct Account {
     pub balances: Vec<Balance>,
     pub num_pixels: u32,
     pub claim_timestamp: u64,
+    pub mint_funded: bool,
 }
 
 #[derive(Serialize)]
@@ -78,6 +79,7 @@ impl Account {
             balances: vec![DEFAULT_CREAM_BALANCE.into(), DEFAULT_CHEDDAR_BALANCE],
             num_pixels: 0,
             claim_timestamp: env::block_timestamp(),
+            mint_funded: false,
         }
     }
 
@@ -126,35 +128,38 @@ impl Account {
 }
 
 impl Place {
-    pub fn get_internal_account_by_id(&self, account_id: &AccountId) -> Option<Account> {
+    pub(crate) fn get_internal_account_by_id(&self, account_id: &AccountId) -> Option<Account> {
         self.account_indices
             .get(&account_id)
             .and_then(|account_index| self.get_internal_account_by_index(account_index))
     }
 
-    pub fn get_mut_account(&mut self, account_id: AccountId) -> Account {
+    pub(crate) fn get_mut_account(&mut self, account_id: &AccountId) -> Account {
         let mut account = self
-            .get_internal_account_by_id(&account_id)
-            .unwrap_or_else(|| Account::new(account_id, self.num_accounts));
+            .get_internal_account_by_id(account_id)
+            .unwrap_or_else(|| Account::new(account_id.clone(), self.num_accounts));
         self.touch(&mut account);
         account
     }
 
-    pub fn get_internal_account_by_index(&self, account_index: AccountIndex) -> Option<Account> {
+    pub(crate) fn get_internal_account_by_index(
+        &self,
+        account_index: AccountIndex,
+    ) -> Option<Account> {
         self.accounts
             .get(&account_index)
             .map(|account| account.into())
     }
 
     /// Updates account state & farmed balance
-    pub fn touch(&mut self, account: &mut Account) {
+    pub(crate) fn touch(&mut self, account: &mut Account) {
         let farmed = account.touch();
         if farmed > 0 {
             self.farmed_balances[Berry::Cheddar as usize] += farmed;
         }
     }
 
-    pub fn save_account(&mut self, account: Account) {
+    pub(crate) fn save_account(&mut self, account: Account) {
         let account_index = account.account_index;
         if account_index >= self.num_accounts {
             self.account_indices
@@ -200,7 +205,7 @@ impl Place {
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
             a.touch();
-            return a.balances[Berry::Cream as usize].try_into().unwrap()
+            return a.balances[Berry::Cream as usize].try_into().unwrap();
         }
         return DEFAULT_CREAM_BALANCE;
     }
