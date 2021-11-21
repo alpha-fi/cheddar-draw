@@ -52,6 +52,7 @@ pub struct Place {
     pub farmed_balances: Vec<Balance>,
 
     pub cheddar: AccountId,
+    pub mint_funded: u32, // number of funded mints - deleted accounts
 }
 
 impl Default for Place {
@@ -75,6 +76,7 @@ impl Place {
             burned_balances: vec![0, 0],
             farmed_balances: vec![0, 0],
             cheddar: cheddar.into(),
+            mint_funded: 0,
         };
 
         let mut account = Account::new(env::current_account_id(), 0);
@@ -142,7 +144,10 @@ impl Place {
 
         assert!(balance > 0, "zero balance");
         account.balances[Berry::Cheddar as usize] = 0;
-        account.mint_funded = true;
+        if !mint_funded {
+            account.mint_funded = true;
+            self.mint_funded += 1;
+        }
         self.save_account(account);
         let bal_str: U128 = balance.into();
 
