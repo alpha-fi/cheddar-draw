@@ -1,7 +1,9 @@
 * {
   box-sizing: border-box;
 }
+
 h2 {
+  font-family: 'Bubblegum Sans', cursive;
   margin: 16px 0;
   display: inline-block;
 }
@@ -15,7 +17,7 @@ h2 {
 }
 
 .btn {
-  border: 2px solid #0072CE;
+  border: 2px solid gold;
   padding: 8px;
   height: 32px;
   background: white;
@@ -34,7 +36,7 @@ h2 {
     outline: none;
   }
   &:hover {
-    background: #ccddff;
+    background: gold;
   }
   &:active {
     color: white;
@@ -306,5 +308,21 @@ Layout For Tablet / Phone
 
 .header h2 {
   padding: 1rem;
+}
+
+.banner {
+font-family: Courier New,serif;
+  font-weight:bold;
+  text-align:center;
+}
+.warning {
+  font-family: Courier New,serif;
+  font-weight: italic;
+  font-size: 10px;
+}
+.harvest {
+  padding: 15px;
+  height: 40px;
+  line-height: 8px;
 }
 

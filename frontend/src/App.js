@@ -10,7 +10,7 @@ import Timer from "react-compound-timer";
 import Big from 'big.js';
 
 const PixelPrice = new BN("10000000000000000000000");
-const IsMainnet = window.location.hostname === "draw.cheddar.farm";
+const IsMainnet = window.location.hostname === "draw.cheddar.farm1";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
@@ -663,7 +663,7 @@ class App extends React.Component {
           "get_account_id_by_index",
           "get_free_drawing_timestamp",
         ],
-        changeMethods: ["draw", "buy_tokens", "select_farming_preference"],
+        changeMethods: ["draw", "buy_tokens", "select_farming_preference", "withdraw_crop"],
       }
     );
     this._pixelCost = parseFloat(await this._contract.get_pixel_cost());
@@ -996,6 +996,12 @@ class App extends React.Component {
     );
   }
 
+  async harvest() {
+
+    await this._contract.withdraw_crop({});
+    await this.refreshAccountStats();
+  }
+
   async buyTokens(amount) {
     const requiredBalance = PixelPrice.muln(amount);
     await this._contract.buy_tokens(
@@ -1167,7 +1173,7 @@ class App extends React.Component {
     );
 
     const content = !this.state.connected ? (
-      <div class="tools">
+      <div className='tools'>
         Connecting...{" "}
         <span
           className="spinner-grow spinner-grow-sm"
@@ -1176,7 +1182,7 @@ class App extends React.Component {
         />
       </div>
     ) : this.state.signedIn ? (
-      <div class="tools">
+      <div className='tools'>
         <div className={`float-right${watchClass}`}>
           <button
             className="btn btn-outline-secondary"
@@ -1240,7 +1246,7 @@ class App extends React.Component {
           >
             DEAL: Buy <span className="font-weight-bold">1200{Cream}</span>{" "}
             for <span className="font-weight-bold">Ⓝ5</span>
-          </button>
+          </button>{" "}
         </div>
         <div className={`color-picker${watchClass}`}>
           <HuePicker
@@ -1326,6 +1332,7 @@ class App extends React.Component {
         <div className="container">
           <div className="row">
             <div>
+              <div className="banner">NO Bots!,NO Board Hogs!,HAVE FUN!!<br/><span className="warning">We reserve the right to ban players.</span></div><br/>
               <div>
                 <canvas
                   ref={this.canvasRef}
@@ -1342,7 +1349,15 @@ class App extends React.Component {
               </div>
             </div>
             <div className={`leaderboard${watchClass}`}>
+                            <button
+                  className="btn btn-primary harvest"
+                  onClick={() => this.harvest()}
+                >
+                  <span className="font-weight-bold"></span>
+                  <span className="font-weight-bold">Harvest {Cheddar}</span>
+                </button>
               <div>
+
                 <Leaderboard
                   owners={this.state.owners}
                   accounts={this.state.accounts}
