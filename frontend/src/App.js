@@ -1289,7 +1289,18 @@ class App extends React.Component {
             onChangeComplete={(c) => this.hueColorChange(c)}
           />
         </div>
+        <div id="harvest">
+          <button
+            className="btn btn-primary harvest"
+            onClick={() => this.harvest()}
+            style={{visibility: this.state.account.cheddarBalance > 0 ? 'visible' : 'hidden' }}
+          >
+            <span className="font-weight-bold"></span>
+            <span className="font-weight-bold">Harvest {Cheddar}</span>
+          </button>
+        </div>
       </div>
+
     ) : (
       <div style={{ marginBottom: "10px" }}>
         {freeDrawing}
@@ -1349,16 +1360,9 @@ class App extends React.Component {
               </div>
             </div>
             <div className={`leaderboard${watchClass}`}>
-                            <button
-                  className="btn btn-primary harvest"
-                  onClick={() => this.harvest()}
-                >
-                  <span className="font-weight-bold"></span>
-                  <span className="font-weight-bold">Harvest {Cheddar}</span>
-                </button>
               <div>
-
                 <Leaderboard
+                  account={this.state.account}
                   owners={this.state.owners}
                   accounts={this.state.accounts}
                   setHover={(accountIndex, v) => this.setHover(accountIndex, v)}
