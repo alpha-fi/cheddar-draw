@@ -7,47 +7,48 @@ import { AlphaPicker, HuePicker, GithubPicker } from "react-color";
 import Switch from "react-switch";
 import { Weapons } from "./Weapons";
 import Timer from "react-compound-timer";
+import Big from 'big.js';
 
 const PixelPrice = new BN("10000000000000000000000");
-const IsMainnet = window.location.hostname === "berryclub.io";
+const IsMainnet = window.location.hostname === "draw.cheddar.farm";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
-  contractName: "berryclub.testnet",
+  contractName: "farm-draw2.cheddar.testnet",
   walletUrl: "https://wallet.testnet.near.org",
 };
 const MainNearConfig = {
   networkId: "mainnet",
   nodeUrl: "https://rpc.mainnet.near.org",
-  contractName: "berryclub.ek.near",
+  contractName: "farm-draw2.cheddar.testnet",
   walletUrl: "https://wallet.near.org",
 };
 const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
 
-const Avocado = (
-  <span role="img" aria-label="avocado" className="berry">
-    🥑
+const Cream = (
+  <span role="img" aria-label="cream" className="berry">
+    🥛
   </span>
 );
-const Banana = (
-  <span role="img" aria-label="banana" className="berry">
-    🍌
+const Cheddar = (
+  <span role="img" aria-label="cheddar" className="berry">
+    🧀
   </span>
 );
-const Cucumber = (
-  <span role="img" aria-label="cucumber" className="berry">
-    🥒
-  </span>
-);
-const Pepper = (
-  <span role="img" aria-label="pepper" className="berry">
-    🌶️
-  </span>
-);
+// const Cucumber = (
+//   <span role="img" aria-label="cucumber" className="berry">
+//     🥒
+//   </span>
+// );
+// const Pepper = (
+//   <span role="img" aria-label="pepper" className="berry">
+//     🌶️
+//   </span>
+// );
 
 const Berry = {
-  Avocado: "Avocado",
-  Banana: "Banana",
+  Cream: "Cream",
+  Cheddar: "Cheddar",
 };
 
 const BoardHeight = 50;
@@ -192,7 +193,7 @@ class App extends React.Component {
       accounts: {},
       highlightedAccountIndex: -1,
       selectedOwnerIndex: false,
-      farmingBanana: false,
+      farmingCheddar: true,
       weaponsOn: false,
       weaponsCodePosition: 0,
       freeDrawingStart: new Date(freeDrawingStartMsEstimated),
@@ -221,8 +222,8 @@ class App extends React.Component {
           signedIn: !!this._accountId,
           accountId: this._accountId,
           ircAccountId: this._accountId.replace(".", "_"),
-          freeDrawingStart: this._freeDrawingStart,
-          freeDrawingEnd: this._freeDrawingEnd,
+          // freeDrawingStart: this._freeDrawingStart,
+          // freeDrawingEnd: this._freeDrawingEnd,
         },
         () => {
           if (window.location.hash.indexOf("watch") >= 0) {
@@ -474,11 +475,11 @@ class App extends React.Component {
     if (!this.state.signedIn || !this._lines || !this._lines[cell.y]) {
       return;
     }
-    const balance = this.state.account ? this.state.account.avocadoBalance : 0;
+    const balance = this.state.account ? this.state.account.creamBalance : 0;
 
     if (
       !this._isFreeDrawing() &&
-      balance - this.state.pendingPixels < this.state.avocadoNeeded
+      balance - this.state.pendingPixels < this.state.creamNeeded
     ) {
       return;
     }
@@ -525,7 +526,7 @@ class App extends React.Component {
     if (!this.state.signedIn || !this._lines || !this._lines[cell.y]) {
       return;
     }
-    const balance = this.state.account ? this.state.account.avocadoBalance : 0;
+    const balance = this.state.account ? this.state.account.creamBalance : 0;
     if (!this._isFreeDrawing() && balance - this.state.pendingPixels < 1) {
       return;
     }
@@ -560,28 +561,27 @@ class App extends React.Component {
       account = {
         accountId,
         accountIndex: -1,
-        avocadoBalance: 25.0,
-        bananaBalance: 0.0,
+        creamBalance: 2.0,
+        cheddarBalance: 0.0,
         numPixels: 0,
-        farmingPreference: Berry.Avocado,
+        farmingPreference: Berry.Cheddar,
       };
     } else {
       account = {
         accountId: account.account_id,
         accountIndex: account.account_index,
-        avocadoBalance: parseFloat(account.avocado_balance) / this._pixelCost,
-        bananaBalance: parseFloat(account.banana_balance) / this._pixelCost,
+        creamBalance: parseFloat(account.avocado_balance) / this._pixelCost,
+        cheddarBalance: account.banana_balance,
         numPixels: account.num_pixels,
         farmingPreference: account.farming_preference,
       };
     }
     account.startTime = new Date().getTime();
-    account.avocadoPixels =
-      account.farmingPreference === Berry.Avocado ? account.numPixels + 1 : 0;
-    account.bananaPixels =
-      account.farmingPreference === Berry.Banana ? account.numPixels : 0;
-    account.avocadoRewardPerMs = account.avocadoPixels / (24 * 60 * 60 * 1000);
-    account.bananaRewardPerMs = account.bananaPixels / (24 * 60 * 60 * 1000);
+    account.creamPixels =
+      account.farmingPreference === Berry.Cream ? account.numPixels + 1 : 0;
+    account.cheddarPixels = account.numPixels;
+    account.creamRewardPerMs = account.creamPixels / (24 * 60 * 60 * 1000);
+    account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
     return account;
   }
 
@@ -602,6 +602,7 @@ class App extends React.Component {
   }
 
   async refreshAccountStats() {
+    console.log("refreshAccountStats");
     let account = await this.getAccount(this._accountId);
     if (this._balanceRefreshTimer) {
       clearInterval(this._balanceRefreshTimer);
@@ -610,17 +611,22 @@ class App extends React.Component {
 
     this.setState({
       pendingPixels: this._pendingPixels.length + this._queue.length,
-      farmingBanana: account.farmingPreference === Berry.Banana,
+      farmingCheddar: true,
       account,
     });
 
     this._balanceRefreshTimer = setInterval(() => {
+      //console.log("_balanceRefreshTimer")
       const t = new Date().getTime() - account.startTime;
+
+
+      var rewards = t * Big(account.cheddarRewardPerMs).toFixed();
+
+
       this.setState({
         account: Object.assign({}, account, {
-          avocadoBalance:
-            account.avocadoBalance + t * account.avocadoRewardPerMs,
-          bananaBalance: account.bananaBalance + t * account.bananaRewardPerMs,
+          creamBalance: account.creamBalance + t * account.creamRewardPerMs,
+          cheddarBalance: Big(this.convertToDecimals(account.cheddarBalance, 24, 5)).add(rewards).toFixed(5),
         }),
         pendingPixels: this._pendingPixels.length + this._queue.length,
       });
@@ -661,9 +667,9 @@ class App extends React.Component {
       }
     );
     this._pixelCost = parseFloat(await this._contract.get_pixel_cost());
-    const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
-    this._freeDrawingStart = new Date(freeDrawingTimestamp);
-    this._freeDrawingEnd = new Date(freeDrawingTimestamp + OneDayMs);
+    // const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
+    // this._freeDrawingStart = new Date(freeDrawingTimestamp);
+    // this._freeDrawingEnd = new Date(freeDrawingTimestamp + OneDayMs);
     if (this._accountId) {
       await this.refreshAccountStats();
     }
@@ -675,6 +681,7 @@ class App extends React.Component {
   }
 
   async refreshBoard(forced) {
+    console.log("refreshBoard")
     if (this._refreshBoardTimer) {
       clearTimeout(this._refreshBoardTimer);
       this._refreshBoardTimer = null;
@@ -748,6 +755,9 @@ class App extends React.Component {
           this._accounts[accountIndex] = await this.getAccountByIndex(
             accountIndex
           );
+
+          this._accounts[accountIndex].cheddarBalance = this.convertToDecimals(this._accounts[accountIndex].cheddarBalance, 24, 5);
+
         } catch (err) {
           console.log("Failed to fetch account index #", accountIndex, err);
         }
@@ -922,7 +932,7 @@ class App extends React.Component {
   }
 
   async requestSignIn() {
-    const appTitle = "Berry Club";
+    const appTitle = "Cheddar Draw";
     await this._walletConnection.requestSignIn(
       NearConfig.contractName,
       appTitle
@@ -1017,32 +1027,33 @@ class App extends React.Component {
     }
   }
 
-  async switchBerry(farmingBanana) {
+  async switchBerry(farmingCheddar) {
     this.setState({
-      farmingBanana,
+      farmingCheddar,
     });
     await this._contract.select_farming_preference({
-      berry: farmingBanana ? Berry.Banana : Berry.Avocado,
+      berry: farmingCheddar ? Berry.Cheddar : Berry.Cream,
     });
     await this.refreshAccountStats();
   }
 
-  async renderImg(img, avocadoNeeded) {
+  async renderImg(img, creamNeeded) {
     this.imageData = img;
     this.setState({
       weaponsOn: false,
       weaponsCodePosition: 0,
       rendering: true,
       pickingColor: false,
-      avocadoNeeded,
+      creamNeeded,
     });
   }
 
   _isFreeDrawing() {
-    const date = new Date();
-    return (
-      this.state.freeDrawingStart <= date && date < this.state.freeDrawingEnd
-    );
+    //const date = new Date();
+    return (false);
+    // return (
+    //   this.state.freeDrawingStart <= date && date < this.state.freeDrawingEnd
+    // );
   }
 
   enableWatchMode() {
@@ -1055,6 +1066,62 @@ class App extends React.Component {
     document.body.style.backgroundColor = "#333";
   }
 
+  convertToDecimals(str:string, decimals:string, truncate:number) {
+    str = str.toString() // convert numbers and bigint
+    // clear leading zeros
+    let i = 0
+    for(; i<str.length && str[i]==="0"; ++i) {}
+    if (i !== 0)
+      str = str.substring(i);
+    if (str === 0 || str === "0")
+      return "0";
+
+    let decimals_n = Number(decimals);
+    if(decimals_n === 0)
+      return str;
+
+    // Pad zeros at the beginning.
+    // We add 1 to make sure the integer digit is included as well)
+    str = String(str).padStart(decimals_n + 1, "0");
+
+    let integer = str.slice(0, -decimals_n);
+    let fractional = str.slice(integer.length);
+    if(integer === "")
+      integer = "0";
+
+    if(fractional === "")
+      return integer;
+    if (truncate === undefined) {
+      return integer + "." + fractional;
+    }
+    else if(fractional > 0) {
+      return integer + "." + fractional.substring(0, truncate);
+    }
+    return integer;
+  }
+
+  convertToBase(n:string, decimals:string) {
+    let decimals_n = Number(decimals);
+    // clear leading zeros
+    let i = 0
+    for(; i<n.length && n[i]==="0"; ++i) {}
+    if (i !== 0)
+      n = n.substring(i);
+
+    let dotIdx = n.indexOf(".");
+    if (dotIdx < 0)  // no decimal part
+      return n + "0".padEnd(decimals, "0");
+
+    let integer = n.substring(0, dotIdx);
+    if(decimals_n === 0)
+      return integer;
+
+    let fractional = n.substring(dotIdx + 1, dotIdx + 1 + decimals).padEnd(decimals, "0");
+    if (integer.length === 0)
+      return fractional;
+    return integer + fractional;
+}
+
   render() {
     const watchClass = this.state.watchMode ? " hidden" : "";
     const isFreeDrawing = this._isFreeDrawing();
@@ -1066,12 +1133,12 @@ class App extends React.Component {
       >
         {isFreeDrawing
           ? "BANANZA!!! Draw for free "
-          : "Time until free drawing "}
+          : ""}
         <Timer
           initialTime={
             isFreeDrawing
               ? this.state.freeDrawingEnd - new Date()
-              : this.state.freeDrawingStart - new Date()
+              : ''
           }
           direction="backward"
           timeToUpdate={100}
@@ -1100,7 +1167,7 @@ class App extends React.Component {
     );
 
     const content = !this.state.connected ? (
-      <div>
+      <div class="tools">
         Connecting...{" "}
         <span
           className="spinner-grow spinner-grow-sm"
@@ -1109,7 +1176,7 @@ class App extends React.Component {
         />
       </div>
     ) : this.state.signedIn ? (
-      <div>
+      <div class="tools">
         <div className={`float-right${watchClass}`}>
           <button
             className="btn btn-outline-secondary"
@@ -1123,6 +1190,7 @@ class App extends React.Component {
           Balance:{" "}
           <Balance
             account={this.state.account}
+            cheddarBalance={this.convertToDecimals(this.state.account.cheddarBalance, 24, 5)}
             pendingPixels={this.state.pendingPixels}
             isFreeDrawing={isFreeDrawing}
             detailed={true}
@@ -1131,16 +1199,16 @@ class App extends React.Component {
             Farming preference:
             <Switch
               onChange={(e) => this.switchBerry(e)}
-              checked={this.state.farmingBanana}
+              checked={this.state.farmingCheddar}
               className="react-switch"
               height={30}
               width={70}
               offColor="#666"
               onColor="#666"
               uncheckedIcon={
-                <div className="switch-berry avocado">{Avocado}</div>
+                <div className="switch-berry cream">{Cream}</div>
               }
-              checkedIcon={<div className="switch-berry banana">{Banana}</div>}
+              checkedIcon={<div className="switch-berry cheddar">{Cheddar}</div>}
             />
           </div>
         </div>
@@ -1149,28 +1217,28 @@ class App extends React.Component {
             className="btn btn-primary"
             onClick={() => this.buyTokens(10)}
           >
-            Buy <span className="font-weight-bold">25{Avocado}</span> for{" "}
+            Buy <span className="font-weight-bold">20{Cream}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.1</span>
           </button>{" "}
           <button
             className="btn btn-primary"
             onClick={() => this.buyTokens(40)}
           >
-            Buy <span className="font-weight-bold">100{Avocado}</span> for{" "}
+            Buy <span className="font-weight-bold">80{Cream}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.4</span>
           </button>{" "}
           <button
             className="btn btn-primary"
             onClick={() => this.buyTokens(100)}
           >
-            Buy <span className="font-weight-bold">250{Avocado}</span> for{" "}
+            Buy <span className="font-weight-bold">200{Cream}</span> for{" "}
             <span className="font-weight-bold">Ⓝ1</span>
           </button>{" "}
           <button
             className="btn btn-success"
             onClick={() => this.buyTokens(500)}
           >
-            DEAL: Buy <span className="font-weight-bold">1500{Avocado}</span>{" "}
+            DEAL: Buy <span className="font-weight-bold">1200{Cream}</span>{" "}
             for <span className="font-weight-bold">Ⓝ5</span>
           </button>
         </div>
@@ -1191,7 +1259,7 @@ class App extends React.Component {
             <span role="img" aria-label="warning">
               ⚠️
             </span>
-            ️ Please! Don't destroy art! If you just want to farm {Banana}, just
+            ️ Please! Don't destroy art! If you just want to farm {Cheddar}, just
             draw with low opacity.
             <span role="img" aria-label="pray">
               🙏
@@ -1234,7 +1302,7 @@ class App extends React.Component {
         <Weapons
           account={this.state.account}
           isFreeDrawing={isFreeDrawing}
-          renderIt={(img, avocadoNeeded) => this.renderImg(img, avocadoNeeded)}
+          renderIt={(img, creamNeeded) => this.renderImg(img, creamNeeded)}
           enableWatchMode={() => this.enableWatchMode()}
         />
       </div>
@@ -1245,19 +1313,13 @@ class App extends React.Component {
       <div>
         <div className={`header${watchClass}`}>
           <h2>
-            {Avocado} Berry Club {Banana}
+            {Cream} Cheddar Draw {Cheddar}
           </h2>{" "}
-          <a className="btn btn-outline-none" href="https://farm.berryclub.io">
-            Berry Farm {Cucumber}
-          </a>
           <a
             className="btn btn-outline-none"
             href="https://app.ref.finance/#wrap.near|berryclub.ek.near"
           >
-            REF Finance {Banana}
-          </a>
-          <a className="btn btn-outline-none" href="https://berry.cards">
-            [BETA] Berry Cards {Pepper}
+            REF Finance {Cheddar}
           </a>
           {content}
         </div>
@@ -1363,25 +1425,25 @@ const Balance = (props) => {
   }
   const fraction = props.detailed ? 3 : 1;
   const avacadoBalance =
-    account.avocadoBalance -
+    account.creamBalance -
     (props.isFreeDrawing ? 0 : props.pendingPixels || 0);
-  const avocadoFarm =
-    account.avocadoPixels > 0 ? (
+  const creamFarm =
+    account.creamPixels > 0 ? (
       <span>
         {"(+"}
-        <span className="font-weight-bold">{account.avocadoPixels}</span>
-        {Avocado}
+        <span className="font-weight-bold">{account.creamPixels}</span>
+        {Cream}
         {"/day)"}
       </span>
     ) : (
       ""
     );
-  const bananaFarm =
-    account.bananaPixels > 0 ? (
+  const cheddarFarm =
+    account.cheddarPixels > 0 ? (
       <span>
         {"(+"}
-        <span className="font-weight-bold">{account.bananaPixels}</span>
-        {Banana}
+        <span className="font-weight-bold">{account.cheddarPixels}</span>
+        {Cheddar}
         {"/day)"}
       </span>
     ) : (
@@ -1392,12 +1454,12 @@ const Balance = (props) => {
       <span className="font-weight-bold">
         {avacadoBalance.toFixed(fraction)}
       </span>
-      {Avocado}{" "}
+      {Cream}{" "}
       <span className="font-weight-bold">
-        {account.bananaBalance.toFixed(fraction)}
+        {account.cheddarBalance}
       </span>
-      {Banana} {avocadoFarm}
-      {bananaFarm}
+      {Cheddar} {creamFarm}
+      {cheddarFarm}
       {props.pendingPixels ? <span> ({props.pendingPixels} pending)</span> : ""}
     </span>
   );

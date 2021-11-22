@@ -87,7 +87,12 @@ h2 {
 
 
 .header {
-  padding: 16px 16px 0px 16px;
+  padding: 16px 0px 0px 0px;
+  background: url('/cheddar-farm-background.svg') no-repeat center top;
+  -webkit-background-size: cover;
+  -moz-background-size: cover;
+  -o-background-size: cover;
+  background-size: cover;
 }
 
 .container {
@@ -283,11 +288,23 @@ Layout For Tablet / Phone
 .free-drawing {
   font-size: 1.5em;
   margin-bottom: 0.5em;
+  display: none;
   &.free {
     color: #ffff00;
     background: #000;
   }
   &.wait {
     color: #999999;
+    disply: none;
   }
 }
+
+.tools {
+  background-color: #fff;
+  padding: 1rem;
+}
+
+.header h2 {
+  padding: 1rem;
+}
+
