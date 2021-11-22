@@ -193,7 +193,7 @@ class App extends React.Component {
       accounts: {},
       highlightedAccountIndex: -1,
       selectedOwnerIndex: false,
-      farmingCheddar: true,
+      viewMyBoard: false,
       weaponsOn: false,
       weaponsCodePosition: 0,
       freeDrawingStart: new Date(freeDrawingStartMsEstimated),
@@ -611,7 +611,7 @@ class App extends React.Component {
 
     this.setState({
       pendingPixels: this._pendingPixels.length + this._queue.length,
-      farmingCheddar: true,
+      viewMyBoard: this.state.viewMyBoard,
       account,
     });
 
@@ -932,7 +932,7 @@ class App extends React.Component {
   }
 
   async requestSignIn() {
-    const appTitle = "Cheddar Draw";
+    const appTitle = "Cheddar BOARD";
     await this._walletConnection.requestSignIn(
       NearConfig.contractName,
       appTitle
@@ -997,9 +997,18 @@ class App extends React.Component {
   }
 
   async harvest() {
-
+    this.spinner();
     await this._contract.withdraw_crop({});
-    await this.refreshAccountStats();
+    let response = await this.refreshAccountStats();
+    console.log(response)
+
+    if(response){
+      document.getElementsByClassName("loader")[0].style.display = "none";
+    }
+  }
+
+  spinner() {
+    document.getElementsByClassName("loader")[0].style.display = "block";
   }
 
   async buyTokens(amount) {
@@ -1012,6 +1021,7 @@ class App extends React.Component {
   }
 
   setHover(accountIndex, v) {
+    console.log(accountIndex)
     if (v) {
       this.setState(
         {
@@ -1033,14 +1043,12 @@ class App extends React.Component {
     }
   }
 
-  async switchBerry(farmingCheddar) {
+  async switchMyBoard(viewMyBoard) {
     this.setState({
-      farmingCheddar,
+      viewMyBoard,
     });
-    await this._contract.select_farming_preference({
-      berry: farmingCheddar ? Berry.Cheddar : Berry.Cream,
-    });
-    await this.refreshAccountStats();
+    this.setHover(this.state.account.accountIndex,viewMyBoard)
+    //await this.refreshAccountStats();
   }
 
   async renderImg(img, creamNeeded) {
@@ -1201,22 +1209,6 @@ class App extends React.Component {
             isFreeDrawing={isFreeDrawing}
             detailed={true}
           />
-          <div>
-            Farming preference:
-            <Switch
-              onChange={(e) => this.switchBerry(e)}
-              checked={this.state.farmingCheddar}
-              className="react-switch"
-              height={30}
-              width={70}
-              offColor="#666"
-              onColor="#666"
-              uncheckedIcon={
-                <div className="switch-berry cream">{Cream}</div>
-              }
-              checkedIcon={<div className="switch-berry cheddar">{Cheddar}</div>}
-            />
-          </div>
         </div>
         <div className={`buttons${watchClass}`}>
           <button
@@ -1289,22 +1281,48 @@ class App extends React.Component {
             onChangeComplete={(c) => this.hueColorChange(c)}
           />
         </div>
+
         <div id="harvest">
-          <button
-            className="btn btn-primary harvest"
-            onClick={() => this.harvest()}
-            style={{visibility: this.state.account.cheddarBalance > 0 ? 'visible' : 'hidden' }}
-          >
-            <span className="font-weight-bold"></span>
-            <span className="font-weight-bold">Harvest {Cheddar}</span>
-          </button>
+          <br/>
+          <div class="row">
+            <div style={{ 'max-width': "600px" }}>
+              <div className="banner"><span>🤖 NO Bots! 🥺 NO Board Hogs! 🎨 HAVE FUN!!</span><br/><span className="warning">We reserve the right to ban players.</span></div>
+              
+              <span className="myBoardLabel">View My Board: </span>
+              <Switch
+                onChange={(e) => this.switchMyBoard(e)}
+                checked={this.state.viewMyBoard}
+                className="react-switch"
+                height={30}
+                width={70}
+                offColor="#666"
+                onColor="#666"
+                uncheckedIcon={
+                  <div className=""></div>
+                }
+                checkedIcon={<div className="switch-berry banana">{Cheddar}</div>}
+              />
+
+              <button
+                className="btn btn-primary harvest"
+                onClick={() => this.harvest()}
+                style={{visibility: this.state.account.cheddarBalance > 0 ? 'visible' : 'hidden' }}
+              >
+                <span className="font-weight-bold"></span>
+                <span className="font-weight-bold">Harvest {Cheddar}</span>
+              </button>
+
+            </div>
+            <div style={{ width: "380px" }}>
+            </div>
+          </div>
         </div>
       </div>
 
     ) : (
       <div style={{ marginBottom: "10px" }}>
         {freeDrawing}
-        <div>
+        <div style={{padding: "0 1rem"}}>
           <button
             className="btn btn-primary"
             onClick={() => this.requestSignIn()}
@@ -1328,22 +1346,27 @@ class App extends React.Component {
     );
     return (
       <div>
+        <div className="loader">
+          <div className="loading"></div>
+        </div>
         <div className={`header${watchClass}`}>
           <h2>
-            {Cream} Cheddar Draw {Cheddar}
+            {Cream} Cheddar BOARD {Cheddar}
           </h2>{" "}
           <a
             className="btn btn-outline-none"
-            href="https://app.ref.finance/#wrap.near|berryclub.ek.near"
+            href="https://app.cheddar.farm"
           >
-            REF Finance {Cheddar}
+            Cheddar Farm {Cheddar}
           </a>
           {content}
         </div>
         <div className="container">
           <div className="row">
             <div>
-              <div className="banner">NO Bots!,NO Board Hogs!,HAVE FUN!!<br/><span className="warning">We reserve the right to ban players.</span></div><br/>
+              <div style={{'text-align': "right"}}>
+
+              </div>
               <div>
                 <canvas
                   ref={this.canvasRef}
@@ -1374,18 +1397,7 @@ class App extends React.Component {
           </div>
         </div>
         <div className={`padded${watchClass}`}>
-          {this.state.signedIn ? (
-            <div>
-              <iframe
-                title="irc"
-                className="irc"
-                frameBorder="0"
-                src={`https://kiwiirc.com/client/irc.kiwiirc.com/?nick=${this.state.ircAccountId}#berryclub`}
-              />
-            </div>
-          ) : (
-            ""
-          )}
+          
         </div>
         {/*<div className={`padded${watchClass}`}>*/}
         {/*  <div className="video-container">*/}
@@ -1424,14 +1436,6 @@ class App extends React.Component {
         {/*  </div>*/}
         {/*</div>*/}
         {weapons}
-        <a
-          className={`github-fork-ribbon right-bottom fixed${watchClass}`}
-          href="https://github.com/evgenykuzyakov/berryclub"
-          data-ribbon="Fork me on GitHub"
-          title="Fork me on GitHub"
-        >
-          Fork me on GitHub
-        </a>
       </div>
     );
   }
@@ -1531,9 +1535,9 @@ const Account = (props) => {
       ? accountId.slice(0, 6) + "..." + accountId.slice(-6)
       : accountId;
   return (
-    <a className="account" href={`https://wayback.berryclub.io/${accountId}`}>
+    <>
       {shortAccountId}
-    </a>
+      </>
   );
 };
 
