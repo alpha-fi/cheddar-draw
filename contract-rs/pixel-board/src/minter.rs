@@ -19,6 +19,12 @@ impl Place {
             PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(_) => {
                 log!("cheddar withdrew successfully {}", amount);
+                // check if we can remove the account from the state
+                if let Some(a) = self.get_internal_account_by_id(&receiver) {
+                    if a.is_empty() {
+                        self.accounts.remove(&a.account_index);
+                    }
+                }
             }
             PromiseResult::Failed => {
                 let mut a = self.get_mut_account(&receiver);

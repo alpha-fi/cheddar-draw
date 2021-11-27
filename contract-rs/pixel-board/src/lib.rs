@@ -11,7 +11,7 @@ pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
 const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
 
-const SAFETY_BAR: Balance = 40_000000_000000_000000_000000; // 40 NEAR
+const SAFETY_BAR: Balance = 50_000000_000000_000000_000000; // 50 NEAR
 
 pub mod account;
 pub use crate::account::*;
@@ -45,12 +45,13 @@ pub struct Place {
     pub board: board::PixelBoard,
     pub last_reward_timestamp: u64,
     pub bought_balances: Vec<Balance>,
-    pub burned_balances: Vec<Balance>,
-    pub farmed_balances: Vec<Balance>,
+    pub used_milk: Balance, // we burn milk to farm cheddar
+    pub farmed_cheddar: Balance,
 
     pub is_active: bool,
     pub admin: AccountId,
     pub cheddar: AccountId,
+    pub treasury: AccountId,
     pub mint_funded: u32,     // number of funded mints - deleted accounts
     pub reward_rate: Balance, // reward per pixel per nanosecond
     pub milk_price: Balance,  // pixel token price in NEAR
@@ -66,7 +67,7 @@ impl Default for Place {
 #[near_bindgen]
 impl Place {
     #[init]
-    pub fn new(cheddar: ValidAccountId, admin: ValidAccountId) -> Self {
+    pub fn new(cheddar: ValidAccountId, admin: ValidAccountId, treasury: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
@@ -75,12 +76,13 @@ impl Place {
             board: PixelBoard::new(),
             last_reward_timestamp: env::block_timestamp(),
             bought_balances: vec![0, 0],
-            burned_balances: vec![0, 0],
-            farmed_balances: vec![0, 0],
+            used_milk: 0,
+            farmed_cheddar: 0,
 
             is_active: false,
             admin: admin.into(),
             cheddar: cheddar.into(),
+            treasury: treasury.into(),
             mint_funded: 0,
             // Initial reward is 0.8 cheddar per day per pixel.
             // that is 80**2 *0.8 = 5120 / day
@@ -135,7 +137,7 @@ impl Place {
         let mut account = self.get_mut_account(&env::predecessor_account_id());
         let new_pixels = pixels.len() as u32;
         let cost = account.charge(Berry::Milk, new_pixels);
-        self.burned_balances[Berry::Milk as usize] += cost;
+        self.used_milk += cost;
 
         let mut old_owners = self.board.set_pixels(account.account_index, &pixels);
         let replaced_pixels = old_owners.remove(&account.account_index).unwrap_or(0);
@@ -174,9 +176,9 @@ impl Place {
         minter::ext_minter::ft_mint(
             recipient.clone(),
             bal_str.clone(),
-            Some("cheddar draw reward".to_string()),
+            Some("cheddar-draw reward".to_string()),
             &self.cheddar,
-            if mint_funded { 1 } else { ONE_NEAR / 50 },
+            if mint_funded { 1 } else { ONE_NEAR / 500 },
             GAS_FOR_FT_MINT,
         )
         .then(minter::ext_self::mint_callback(
@@ -195,9 +197,9 @@ impl Place {
     /***
      *** ADMIN FUNCTIONS ***/
 
+    /// Withdraws earned NEAR (from Milk sells) to the treasury. Anyone can do it.
+    /// Returns amount of transferred NEAR.
     pub fn withdraw_near(&self) -> U128 {
-        self.only_admin();
-
         let account_balance = env::account_balance();
         let storage_usage = env::storage_usage();
         let locked_for_storage = Balance::from(storage_usage) * STORAGE_PRICE_PER_BYTE + SAFETY_BAR;
@@ -205,7 +207,7 @@ impl Place {
             return 0.into();
         }
         let liquid_balance = account_balance - locked_for_storage;
-        // TODO: withdraw
+        Promise::new(self.treasury.clone()).transfer(liquid_balance);
         return liquid_balance.into();
     }
 

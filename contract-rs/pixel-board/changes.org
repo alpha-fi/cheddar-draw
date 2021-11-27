@@ -5,6 +5,7 @@
 - board is 80x80
 - removed =get_pixel_cost=
 - added =blacklist= account set. Accounts from blacklist can buy tokens and can draw
+- collected NEAR goes to treasury (contract parameter)
 
 Functions:
 - removed get_free_drawing_timestamp
@@ -27,12 +28,5 @@ Cream is denominated in full  values (1e1) instead of 1e24
 + account:
 CTR=farm-draw2.cheddar.testnet
 CHEDDAR=token-v3.cheddar.testnet
-near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token-v3.cheddar.testnet"}' --accountId $CTR
+near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token-v3.cheddar.testnet", "admin": "cheddar.testnet", "treasury": "cheddar.testnet"}' --accountId $CTR
 near call $CHEDDAR add_minter '{"account_id":"farm-draw2.cheddar.testnet"}' --accountId cheddar.testnet --depositYocto 1
-
-* TODO:
-
-+ need to decide what to do with collected NEAR
-  proposal: fund Dev!
-+ add option to remove account
-+ decide if we want to make storage ?

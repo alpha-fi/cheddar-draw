@@ -76,6 +76,20 @@ impl Account {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        // all balances except milk must be zero
+        for i in 1..self.balances.len() {
+            if self.balances[i] != 0 {
+                return false;
+            }
+        }
+        let milk = self.balances[0];
+        self.account_id != ""
+            && (milk == 0 || milk == 2) // 2 = the default balance
+            && self.balances[1] == 0
+            && self.num_pixels == 0
+    }
+
     /// Buying pixel (milk) tokens for drawing pixels
     pub fn buy_tokens(&mut self, near_amount: Balance, milk_price: Balance) -> Balance {
         let amount = if near_amount >= MIN_AMOUNT_FOR_DISCOUNT {
@@ -146,7 +160,7 @@ impl Place {
     pub(crate) fn touch(&mut self, account: &mut Account) {
         let farmed = account.touch(self.reward_rate);
         if farmed > 0 {
-            self.farmed_balances[Berry::Cheddar as usize] += farmed;
+            self.farmed_cheddar += farmed;
         }
     }
 
