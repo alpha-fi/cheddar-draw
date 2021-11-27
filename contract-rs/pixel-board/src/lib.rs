@@ -1,6 +1,6 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::LookupMap;
-use near_sdk::json_types::{ValidAccountId, U128, U64};
+use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Gas, Promise};
 
@@ -32,7 +32,7 @@ static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc:
 #[derive(BorshDeserialize, BorshSerialize, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub enum Berry {
-    Cream,
+    Milk,
     Cheddar,
 }
 
@@ -53,6 +53,7 @@ pub struct Place {
     pub cheddar: AccountId,
     pub mint_funded: u32,     // number of funded mints - deleted accounts
     pub reward_rate: Balance, // reward per pixel per nanosecond
+    pub milk_price: Balance,  // pixel token price in NEAR
 }
 
 impl Default for Place {
@@ -82,6 +83,7 @@ impl Place {
             mint_funded: 0,
             // Initial reward is 0.8 cheddar per day per pixel.
             reward_rate: ONE_NEAR * 125 / (100 * 24 * 60 * 60 * 1_000_000_000),
+            milk_price: ONE_NEAR / 400,
         };
 
         let mut account = Account::new(env::current_account_id(), 0);
@@ -101,6 +103,10 @@ impl Place {
         self.account_indices.contains_key(account_id.as_ref())
     }
 
+    pub fn get_milk_price(&self) -> U128 {
+        self.milk_price.into()
+    }
+
     #[payable]
     pub fn buy_tokens(&mut self) {
         self.assert_active();
@@ -112,9 +118,9 @@ impl Place {
         );
 
         let mut account = self.get_mut_account(&env::predecessor_account_id());
-        let minted_amount = account.buy_tokens(near_amount);
+        let minted_amount = account.buy_tokens(near_amount, self.milk_price);
         self.save_account(account);
-        self.bought_balances[Berry::Cream as usize] += minted_amount;
+        self.bought_balances[Berry::Milk as usize] += minted_amount;
     }
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
@@ -125,8 +131,8 @@ impl Place {
         }
         let mut account = self.get_mut_account(&env::predecessor_account_id());
         let new_pixels = pixels.len() as u32;
-        let cost = account.charge(Berry::Cream, new_pixels);
-        self.burned_balances[Berry::Cream as usize] += cost;
+        let cost = account.charge(Berry::Milk, new_pixels);
+        self.burned_balances[Berry::Milk as usize] += cost;
 
         let mut old_owners = self.board.set_pixels(account.account_index, &pixels);
         let replaced_pixels = old_owners.remove(&account.account_index).unwrap_or(0);
@@ -182,10 +188,12 @@ impl Place {
         self.num_accounts
     }
 
-    pub fn get_last_reward_timestamp(&self) -> U64 {
-        self.last_reward_timestamp.into()
-    }
+    /***
+     *** ADMIN FUNCTIONS ***/
+
     pub fn withdraw_near(&self) -> U128 {
+        self.only_admin();
+
         let account_balance = env::account_balance();
         let storage_usage = env::storage_usage();
         let locked_for_storage = Balance::from(storage_usage) * STORAGE_PRICE_PER_BYTE + SAFETY_BAR;
@@ -197,8 +205,6 @@ impl Place {
         return liquid_balance.into();
     }
 
-    /*** ADMIN FUNCTIONS ***/
-
     /** Sets new rewards rate (in tokens per pixel per nanosecond) */
     pub fn update_reward_rate(&mut self, rewards: U128) {
         self.only_admin();
@@ -206,7 +212,14 @@ impl Place {
     }
 
     pub fn toggle_active(&mut self) {
+        self.only_admin();
         self.is_active = !self.is_active;
+    }
+
+    /// sets milk price in NEAR.
+    pub fn set_milk_price(&mut self, price: U128) {
+        self.only_admin();
+        self.milk_price = price.into();
     }
 }
 

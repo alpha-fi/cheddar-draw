@@ -7,11 +7,8 @@ use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId};
 
 pub const ONE_NEAR: Balance = 1_000_000_000_000_000_000_000_000;
-// TODO: adjust and move it to the state
-pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / 400;
 pub const MIN_AMOUNT_FOR_DISCOUNT: Balance = 5 * ONE_NEAR;
-pub const PIXEL_TOKEN_PRICE_WITH_DISCOUNT: Balance = PIXEL_TOKEN_PRICE * 5 / 6;
-pub const DEFAULT_CREAM_BALANCE: u32 = 2;
+pub const DEFAULT_MILK_BALANCE: u32 = 2;
 
 pub type AccountIndex = u32;
 
@@ -60,7 +57,7 @@ impl From<Account> for HumanAccount {
         Self {
             account_id: account.account_id,
             account_index: account.account_index,
-            avocado_balance: account.balances[Berry::Cream as usize].into(),
+            avocado_balance: account.balances[Berry::Milk as usize].into(),
             banana_balance: account.balances[Berry::Cheddar as usize].into(),
             num_pixels: account.num_pixels,
         }
@@ -72,19 +69,19 @@ impl Account {
         Self {
             account_id,
             account_index,
-            balances: vec![DEFAULT_CREAM_BALANCE.into(), 0],
+            balances: vec![DEFAULT_MILK_BALANCE.into(), 0],
             num_pixels: 0,
             claim_timestamp: env::block_timestamp(),
             mint_funded: false,
         }
     }
 
-    /// Buying avocados
-    pub fn buy_tokens(&mut self, near_amount: Balance) -> Balance {
+    /// Buying pixel (milk) tokens for drawing pixels
+    pub fn buy_tokens(&mut self, near_amount: Balance, milk_price: Balance) -> Balance {
         let amount = if near_amount >= MIN_AMOUNT_FOR_DISCOUNT {
-            near_amount / PIXEL_TOKEN_PRICE_WITH_DISCOUNT
+            near_amount / milk_price / 5 * 6 // applying discount
         } else {
-            near_amount / PIXEL_TOKEN_PRICE
+            near_amount / milk_price
         };
         let near_int = near_amount / ONE_NEAR;
         env::log(
@@ -96,7 +93,7 @@ impl Account {
             )
             .as_bytes(),
         );
-        self.balances[Berry::Cream as usize] += amount;
+        self.balances[Berry::Milk as usize] += amount;
         amount
     }
 
@@ -195,9 +192,9 @@ impl Place {
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
             a.touch(self.reward_rate);
-            return a.balances[Berry::Cream as usize].try_into().unwrap();
+            return a.balances[Berry::Milk as usize].try_into().unwrap();
         }
-        return DEFAULT_CREAM_BALANCE;
+        return DEFAULT_MILK_BALANCE;
     }
 
     pub fn get_account_num_pixels(&self, account_id: ValidAccountId) -> u32 {
