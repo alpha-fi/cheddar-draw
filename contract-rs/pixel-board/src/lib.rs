@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::LookupMap;
+use near_sdk::collections::{LookupMap, LookupSet};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Gas, Promise};
@@ -54,6 +54,7 @@ pub struct Place {
     pub mint_funded: u32,     // number of funded mints - deleted accounts
     pub reward_rate: Balance, // reward per pixel per nanosecond
     pub milk_price: Balance,  // pixel token price in NEAR
+    pub blacklist: LookupSet<AccountId>,
 }
 
 impl Default for Place {
@@ -84,6 +85,7 @@ impl Place {
             // Initial reward is 0.8 cheddar per day per pixel.
             reward_rate: ONE_NEAR * 125 / (100 * 24 * 60 * 60 * 1_000_000_000),
             milk_price: ONE_NEAR / 400,
+            blacklist: LookupSet::new(b"b".to_vec()),
         };
 
         let mut account = Account::new(env::current_account_id(), 0);
@@ -149,6 +151,7 @@ impl Place {
 
     pub fn withdraw_crop(&mut self) {
         let recipient = env::predecessor_account_id();
+        assert!(self.blacklist.contains(&recipient), "Account blacklisted");
 
         let mut account = self
             .get_internal_account_by_id(&recipient)
@@ -205,6 +208,11 @@ impl Place {
         return liquid_balance.into();
     }
 
+    pub fn change_admin(&mut self, admin: AccountId) {
+        self.only_admin();
+        self.admin = admin;
+    }
+
     /** Sets new rewards rate (in tokens per pixel per nanosecond) */
     pub fn update_reward_rate(&mut self, rewards: U128) {
         self.only_admin();
@@ -220,6 +228,16 @@ impl Place {
     pub fn set_milk_price(&mut self, price: U128) {
         self.only_admin();
         self.milk_price = price.into();
+    }
+
+    pub fn add_to_blacklist(&mut self, account: AccountId) {
+        self.only_admin();
+        self.blacklist.insert(&account);
+    }
+
+    pub fn remove_from_blacklist(&mut self, account: AccountId) {
+        self.only_admin();
+        self.blacklist.remove(&account);
     }
 }
 
