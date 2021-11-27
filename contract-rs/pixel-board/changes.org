@@ -17,7 +17,7 @@ Functions:
 
 Values:
 - pixel cost = 1 Cream  (instead of 1e18)
-- pixel token (cream) price = 1NEAR / 200 (instead of 1/250)
+- pixel token (cream) price = 1NEAR -> 400 (instead of 1/250)
 - DEFAULT_CREAM_BALANCE = 2 (instead of 25)
 
 Cream is denominated in full  values (1e1) instead of 1e24

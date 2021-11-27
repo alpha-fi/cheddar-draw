@@ -83,7 +83,8 @@ impl Place {
             cheddar: cheddar.into(),
             mint_funded: 0,
             // Initial reward is 0.8 cheddar per day per pixel.
-            reward_rate: ONE_NEAR * 125 / (100 * 24 * 60 * 60 * 1_000_000_000),
+            // that is 80**2 *0.8 = 5120 / day
+            reward_rate: ONE_NEAR * 4 / (5 * 24 * 60 * 60 * 1_000_000_000),
             milk_price: ONE_NEAR / 400,
             blacklist: LookupSet::new(b"b".to_vec()),
         };
