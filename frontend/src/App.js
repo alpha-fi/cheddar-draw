@@ -661,7 +661,6 @@ class App extends React.Component {
           "get_account_balance",
           "get_account_num_pixels",
           "get_account_id_by_index",
-          "get_free_drawing_timestamp",
         ],
         changeMethods: ["draw", "buy_tokens", "select_farming_preference", "withdraw_crop"],
       }

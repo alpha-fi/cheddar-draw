@@ -13,9 +13,6 @@ const NO_DEPOSIT: Balance = 0;
 
 const SAFETY_BAR: Balance = 40_000000_000000_000000_000000; // 40 NEAR
 
-const FARM_START_TIME: u64 = 1637442000_000_000_000;
-const REWARD_PERIOD: u64 = 60 * 1_000_000_000; // 60s
-
 pub mod account;
 pub use crate::account::*;
 
@@ -51,8 +48,11 @@ pub struct Place {
     pub burned_balances: Vec<Balance>,
     pub farmed_balances: Vec<Balance>,
 
+    pub is_active: bool,
+    pub admin: AccountId,
     pub cheddar: AccountId,
-    pub mint_funded: u32, // number of funded mints - deleted accounts
+    pub mint_funded: u32,     // number of funded mints - deleted accounts
+    pub reward_rate: Balance, // reward per pixel per nanosecond
 }
 
 impl Default for Place {
@@ -64,7 +64,7 @@ impl Default for Place {
 #[near_bindgen]
 impl Place {
     #[init]
-    pub fn new(cheddar: ValidAccountId) -> Self {
+    pub fn new(cheddar: ValidAccountId, admin: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
@@ -75,8 +75,13 @@ impl Place {
             bought_balances: vec![0, 0],
             burned_balances: vec![0, 0],
             farmed_balances: vec![0, 0],
+
+            is_active: false,
+            admin: admin.into(),
             cheddar: cheddar.into(),
             mint_funded: 0,
+            // Initial reward is 0.8 cheddar per day per pixel.
+            reward_rate: ONE_NEAR * 125 / (100 * 24 * 60 * 60 * 1_000_000_000),
         };
 
         let mut account = Account::new(env::current_account_id(), 0);
@@ -87,6 +92,7 @@ impl Place {
     }
 
     pub fn register_account(&mut self) {
+        self.assert_active();
         let account = self.get_mut_account(&env::predecessor_account_id());
         self.save_account(account);
     }
@@ -97,6 +103,8 @@ impl Place {
 
     #[payable]
     pub fn buy_tokens(&mut self) {
+        self.assert_active();
+
         let near_amount = env::attached_deposit();
         assert!(
             near_amount >= ONE_NEAR / 10,
@@ -110,6 +118,8 @@ impl Place {
     }
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
+        self.assert_active();
+
         if pixels.is_empty() {
             return;
         }
@@ -175,11 +185,6 @@ impl Place {
     pub fn get_last_reward_timestamp(&self) -> U64 {
         self.last_reward_timestamp.into()
     }
-
-    pub fn get_next_reward_timestamp(&self) -> U64 {
-        core::cmp::max(FARM_START_TIME, self.last_reward_timestamp + REWARD_PERIOD).into()
-    }
-
     pub fn withdraw_near(&self) -> U128 {
         let account_balance = env::account_balance();
         let storage_usage = env::storage_usage();
@@ -190,6 +195,18 @@ impl Place {
         let liquid_balance = account_balance - locked_for_storage;
         // TODO: withdraw
         return liquid_balance.into();
+    }
+
+    /*** ADMIN FUNCTIONS ***/
+
+    /** Sets new rewards rate (in tokens per pixel per nanosecond) */
+    pub fn update_reward_rate(&mut self, rewards: U128) {
+        self.only_admin();
+        self.reward_rate = rewards.into();
+    }
+
+    pub fn toggle_active(&mut self) {
+        self.is_active = !self.is_active;
     }
 }
 
@@ -227,11 +244,13 @@ mod tests {
     fn test_new() {
         let mut context = get_context(3_600_000_000_000, false);
         testing_env!(context.clone());
-        let contract = Place::new("token.cheddar.near".try_into().unwrap());
+        let contract = Place::new(
+            "token.cheddar.near".try_into().unwrap(),
+            "admin.cheddar.near".try_into().unwrap(),
+        );
 
         context.is_view = true;
         testing_env!(context.clone());
-        assert_eq!(contract.get_pixel_cost(), 1);
         assert_eq!(
             contract.get_line_versions(),
             vec![0u32; BOARD_HEIGHT as usize]

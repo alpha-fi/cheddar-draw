@@ -7,9 +7,9 @@ use near_sdk::near_bindgen;
 use near_sdk::serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const BOARD_WIDTH: u32 = 50;
-pub const BOARD_HEIGHT: u32 = 50;
-pub const TOTAL_NUM_PIXELS: u32 = BOARD_WIDTH * BOARD_HEIGHT;
+pub const BOARD_WIDTH: u8 = 80;
+pub const BOARD_HEIGHT: u8 = 80;
+pub const TOTAL_NUM_PIXELS: u32 = 80 * 80;
 
 #[derive(BorshDeserialize, BorshSerialize, Copy, Clone)]
 pub struct Pixel {
@@ -44,8 +44,8 @@ pub struct PixelBoard {
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct SetPixelRequest {
-    pub x: u32,
-    pub y: u32,
+    pub x: u8,
+    pub y: u8,
     pub color: u32,
 }
 
@@ -97,10 +97,11 @@ impl PixelBoard {
         for (i, line) in lines {
             self.save_line(i, &line);
         }
+
         old_owners
     }
 
-    fn save_line(&mut self, index: u32, line: &PixelLine) {
+    fn save_line(&mut self, index: u8, line: &PixelLine) {
         self.lines.replace(u64::from(index), line);
         self.line_versions[index as usize] += 1;
     }

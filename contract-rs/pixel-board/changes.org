@@ -2,11 +2,16 @@
 
 - renamed Avocado to Cream
 - renamed Banana to Cheddar
+- board is 80x80
+- removed =get_pixel_cost=
 
 Functions:
 - removed get_free_drawing_timestamp
 - draw doesn't mint cheddar. added `withdraw_crop()` to draw cheddar!
   NOTE:  need to add "farm" button in the game, which will cal `withdraw_crop`
+- added `assert_active` - all mutation functions ecept "withdraw_crop" ar disabled if the contract is disabled.
+- added `toggle_active` - only admin can toggle active state.
+- added `change_admin` - only admin can change admin. It can be nullified (set to zero)
 
 Values:
 - pixel cost = 1 Cream  (instead of 1e18)

@@ -7,15 +7,11 @@ use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::{env, near_bindgen, AccountId};
 
 pub const ONE_NEAR: Balance = 1_000_000_000_000_000_000_000_000;
-// TOOD: adjust
-pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / 200;
+// TODO: adjust and move it to the state
+pub const PIXEL_TOKEN_PRICE: Balance = ONE_NEAR / 400;
 pub const MIN_AMOUNT_FOR_DISCOUNT: Balance = 5 * ONE_NEAR;
 pub const PIXEL_TOKEN_PRICE_WITH_DISCOUNT: Balance = PIXEL_TOKEN_PRICE * 5 / 6;
 pub const DEFAULT_CREAM_BALANCE: u32 = 2;
-pub const DEFAULT_CHEDDAR_BALANCE: Balance = 0;
-/// Current reward is 1 cheddar per day per pixel.
-/// TODO: adjust -- will also need to adjust PORTION_OF_REWARDS
-pub const REWARD_PER_PIXEL_PER_NANOSEC: Balance = ONE_NEAR / (24 * 60 * 60 * 1_000_000_000);
 
 pub type AccountIndex = u32;
 
@@ -76,7 +72,7 @@ impl Account {
         Self {
             account_id,
             account_index,
-            balances: vec![DEFAULT_CREAM_BALANCE.into(), DEFAULT_CHEDDAR_BALANCE],
+            balances: vec![DEFAULT_CREAM_BALANCE.into(), 0],
             num_pixels: 0,
             claim_timestamp: env::block_timestamp(),
             mint_funded: false,
@@ -105,12 +101,10 @@ impl Account {
     }
 
     /// Updates the account balance, returns number of farmed tokens.
-    pub fn touch(&mut self) -> Balance {
+    pub fn touch(&mut self, reward_rate: Balance) -> Balance {
         let block_timestamp = env::block_timestamp();
         let time_diff = block_timestamp - self.claim_timestamp;
-        let farmed = Balance::from(self.num_pixels)
-            * Balance::from(time_diff)
-            * REWARD_PER_PIXEL_PER_NANOSEC;
+        let farmed = Balance::from(self.num_pixels) * Balance::from(time_diff) * reward_rate;
         self.claim_timestamp = block_timestamp;
         self.balances[Berry::Cheddar as usize] += farmed;
         farmed
@@ -153,7 +147,7 @@ impl Place {
 
     /// Updates account state & farmed balance
     pub(crate) fn touch(&mut self, account: &mut Account) {
-        let farmed = account.touch();
+        let farmed = account.touch(self.reward_rate);
         if farmed > 0 {
             self.farmed_balances[Berry::Cheddar as usize] += farmed;
         }
@@ -181,14 +175,10 @@ impl Place {
 
 #[near_bindgen]
 impl Place {
-    pub fn get_pixel_cost(&self) -> u32 {
-        1
-    }
-
     pub fn get_account_by_index(&self, account_index: AccountIndex) -> Option<HumanAccount> {
         self.get_internal_account_by_index(account_index)
             .map(|mut account| {
-                account.touch();
+                account.touch(self.reward_rate);
                 account.into()
             })
     }
@@ -196,7 +186,7 @@ impl Place {
     pub fn get_account(&self, account_id: ValidAccountId) -> Option<HumanAccount> {
         self.get_internal_account_by_id(account_id.as_ref())
             .map(|mut account| {
-                account.touch();
+                account.touch(self.reward_rate);
                 account.into()
             })
     }
@@ -204,7 +194,7 @@ impl Place {
     // returns amount of Cream tokens
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
-            a.touch();
+            a.touch(self.reward_rate);
             return a.balances[Berry::Cream as usize].try_into().unwrap();
         }
         return DEFAULT_CREAM_BALANCE;
