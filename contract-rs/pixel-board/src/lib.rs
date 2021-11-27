@@ -11,7 +11,7 @@ pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
 const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
 
-const SAFETY_BAR: Balance = 50_000000_000000_000000_000000; // 50 NEAR
+const SAFETY_BAR: Balance = 30 * ONE_NEAR;
 
 pub mod account;
 pub use crate::account::*;
@@ -241,6 +241,11 @@ impl Place {
     pub fn remove_from_blacklist(&mut self, account: AccountId) {
         self.only_admin();
         self.blacklist.remove(&account);
+    }
+
+    pub fn clear_board(&mut self) {
+        self.only_admin();
+        self.board.lines.clear();
     }
 }
 
