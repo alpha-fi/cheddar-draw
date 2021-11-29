@@ -17,3 +17,12 @@ impl Place {
         assert!(self.is_active, "Smart contract is deactivated");
     }
 }
+
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Settings {
+    /// cheddar emission / pixel / millisecond
+    pub reward_rate: U128,
+    /// milk token price in NEAR
+    pub milk_price: U128,
+}
