@@ -79,7 +79,7 @@ impl Place {
             used_milk: 0,
             farmed_cheddar: 0,
 
-            is_active: false,
+            is_active: true,
             admin: admin.into(),
             cheddar: cheddar.into(),
             treasury: treasury.into(),
@@ -192,6 +192,10 @@ impl Place {
 
     pub fn get_num_accounts(&self) -> u32 {
         self.num_accounts
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 
     /***
