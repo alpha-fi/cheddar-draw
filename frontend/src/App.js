@@ -14,19 +14,19 @@ const IsMainnet = window.location.hostname === "draw.cheddar.farm1";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
-  contractName: "farm-draw2.cheddar.testnet",
+  contractName: "farm-draw3.cheddar.testnet",
   walletUrl: "https://wallet.testnet.near.org",
 };
 const MainNearConfig = {
   networkId: "mainnet",
   nodeUrl: "https://rpc.mainnet.near.org",
-  contractName: "farm-draw2.cheddar.testnet",
+  contractName: "farm-draw3.cheddar.testnet",
   walletUrl: "https://wallet.near.org",
 };
 const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
 
-const Cream = (
-  <span role="img" aria-label="cream" className="berry">
+const Milk = (
+  <span role="img" aria-label="milk" className="berry">
     🥛
   </span>
 );
@@ -47,13 +47,13 @@ const Cheddar = (
 // );
 
 const Berry = {
-  Cream: "Cream",
+  Milk: "Milk",
   Cheddar: "Cheddar",
 };
 
-const BoardHeight = 50;
-const BoardWidth = 50;
-const NumLinesPerFetch = 50;
+const BoardHeight = 80;
+const BoardWidth = 80;
+const NumLinesPerFetch = 80;
 const ExpectedLineLength = 4 + 8 * BoardWidth;
 const CellWidth = 12;
 const CellHeight = 12;
@@ -475,11 +475,11 @@ class App extends React.Component {
     if (!this.state.signedIn || !this._lines || !this._lines[cell.y]) {
       return;
     }
-    const balance = this.state.account ? this.state.account.creamBalance : 0;
+    const balance = this.state.account ? this.state.account.milkBalance : 0;
 
     if (
       !this._isFreeDrawing() &&
-      balance - this.state.pendingPixels < this.state.creamNeeded
+      balance - this.state.pendingPixels < this.state.milkNeeded
     ) {
       return;
     }
@@ -526,7 +526,7 @@ class App extends React.Component {
     if (!this.state.signedIn || !this._lines || !this._lines[cell.y]) {
       return;
     }
-    const balance = this.state.account ? this.state.account.creamBalance : 0;
+    const balance = this.state.account ? this.state.account.milkBalance : 0;
     if (!this._isFreeDrawing() && balance - this.state.pendingPixels < 1) {
       return;
     }
@@ -561,26 +561,27 @@ class App extends React.Component {
       account = {
         accountId,
         accountIndex: -1,
-        creamBalance: 2.0,
+        milkBalance: 2.0,
         cheddarBalance: 0.0,
         numPixels: 0,
         farmingPreference: Berry.Cheddar,
       };
     } else {
+      console.log((account.avocado_balance))
       account = {
         accountId: account.account_id,
         accountIndex: account.account_index,
-        creamBalance: parseFloat(account.avocado_balance) / this._pixelCost,
+        milkBalance: parseFloat(account.avocado_balance),
         cheddarBalance: account.banana_balance,
         numPixels: account.num_pixels,
         farmingPreference: account.farming_preference,
       };
     }
     account.startTime = new Date().getTime();
-    account.creamPixels =
-      account.farmingPreference === Berry.Cream ? account.numPixels + 1 : 0;
+    account.milkPixels =
+      account.farmingPreference === Berry.Milk ? account.numPixels + 1 : 0;
     account.cheddarPixels = account.numPixels;
-    account.creamRewardPerMs = account.creamPixels / (24 * 60 * 60 * 1000);
+    account.milkRewardPerMs = account.milkPixels / (24 * 60 * 60 * 1000);
     account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
     return account;
   }
@@ -625,7 +626,7 @@ class App extends React.Component {
 
       this.setState({
         account: Object.assign({}, account, {
-          creamBalance: account.creamBalance + t * account.creamRewardPerMs,
+          milkBalance: account.milkBalance + t * account.milkRewardPerMs,
           cheddarBalance: Big(this.convertToDecimals(account.cheddarBalance, 24, 5)).add(rewards).toFixed(5),
         }),
         pendingPixels: this._pendingPixels.length + this._queue.length,
@@ -657,7 +658,7 @@ class App extends React.Component {
           "get_account_by_index",
           "get_lines",
           "get_line_versions",
-          "get_pixel_cost",
+          "get_milk_price",
           "get_account_balance",
           "get_account_num_pixels",
           "get_account_id_by_index",
@@ -665,7 +666,8 @@ class App extends React.Component {
         changeMethods: ["draw", "buy_tokens", "select_farming_preference", "withdraw_crop"],
       }
     );
-    this._pixelCost = parseFloat(await this._contract.get_pixel_cost());
+    this._pixelCost = parseFloat(await this._contract.get_milk_price());
+    console.log(await this._contract.get_milk_price())
     // const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
     // this._freeDrawingStart = new Date(freeDrawingTimestamp);
     // this._freeDrawingEnd = new Date(freeDrawingTimestamp + OneDayMs);
@@ -1050,14 +1052,14 @@ class App extends React.Component {
     //await this.refreshAccountStats();
   }
 
-  async renderImg(img, creamNeeded) {
+  async renderImg(img, milkNeeded) {
     this.imageData = img;
     this.setState({
       weaponsOn: false,
       weaponsCodePosition: 0,
       rendering: true,
       pickingColor: false,
-      creamNeeded,
+      milkNeeded,
     });
   }
 
@@ -1214,28 +1216,28 @@ class App extends React.Component {
             className="btn btn-primary"
             onClick={() => this.buyTokens(10)}
           >
-            Buy <span className="font-weight-bold">20{Cream}</span> for{" "}
+            Buy <span className="font-weight-bold">20{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.1</span>
           </button>{" "}
           <button
             className="btn btn-primary"
             onClick={() => this.buyTokens(40)}
           >
-            Buy <span className="font-weight-bold">80{Cream}</span> for{" "}
+            Buy <span className="font-weight-bold">80{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.4</span>
           </button>{" "}
           <button
             className="btn btn-primary"
             onClick={() => this.buyTokens(100)}
           >
-            Buy <span className="font-weight-bold">200{Cream}</span> for{" "}
+            Buy <span className="font-weight-bold">200{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ1</span>
           </button>{" "}
           <button
             className="btn btn-success"
             onClick={() => this.buyTokens(500)}
           >
-            DEAL: Buy <span className="font-weight-bold">1200{Cream}</span>{" "}
+            DEAL: Buy <span className="font-weight-bold">1200{Milk}</span>{" "}
             for <span className="font-weight-bold">Ⓝ5</span>
           </button>{" "}
         </div>
@@ -1283,8 +1285,8 @@ class App extends React.Component {
 
         <div id="harvest">
           <br/>
-          <div class="row">
-            <div style={{ 'max-width': "600px" }}>
+          <div className="row">
+            <div style={{ 'maxWidth': "600px" }}>
               <div className="banner"><span>🤖 NO Bots! 🥺 NO Board Hogs! 🎨 HAVE FUN!!</span><br/><span className="warning">We reserve the right to ban players.</span></div>
               
               <span className="myBoardLabel">View My Board: </span>
@@ -1336,7 +1338,7 @@ class App extends React.Component {
         <Weapons
           account={this.state.account}
           isFreeDrawing={isFreeDrawing}
-          renderIt={(img, creamNeeded) => this.renderImg(img, creamNeeded)}
+          renderIt={(img, milkNeeded) => this.renderImg(img, milkNeeded)}
           enableWatchMode={() => this.enableWatchMode()}
         />
       </div>
@@ -1350,7 +1352,7 @@ class App extends React.Component {
         </div>
         <div className={`header${watchClass}`}>
           <h2>
-            {Cream} Cheddar BOARD {Cheddar}
+            {Milk} Cheddar BOARD {Cheddar}
           </h2>{" "}
           <a
             className="btn btn-outline-none"
@@ -1363,14 +1365,14 @@ class App extends React.Component {
         <div className="container">
           <div className="row">
             <div>
-              <div style={{'text-align': "right"}}>
+              <div style={{'textAlign': "right"}}>
 
               </div>
               <div>
                 <canvas
                   ref={this.canvasRef}
-                  width={600}
-                  height={600}
+                  width={960}
+                  height={960}
                   className={
                     this.state.boardLoaded
                       ? `pixel-board${
@@ -1447,14 +1449,14 @@ const Balance = (props) => {
   }
   const fraction = props.detailed ? 3 : 1;
   const avacadoBalance =
-    account.creamBalance -
+    account.milkBalance -
     (props.isFreeDrawing ? 0 : props.pendingPixels || 0);
-  const creamFarm =
-    account.creamPixels > 0 ? (
+  const milkFarm =
+    account.milkPixels > 0 ? (
       <span>
         {"(+"}
-        <span className="font-weight-bold">{account.creamPixels}</span>
-        {Cream}
+        <span className="font-weight-bold">{account.milkPixels}</span>
+        {Milk}
         {"/day)"}
       </span>
     ) : (
@@ -1476,11 +1478,11 @@ const Balance = (props) => {
       <span className="font-weight-bold">
         {avacadoBalance.toFixed(fraction)}
       </span>
-      {Cream}{" "}
+      {Milk}{" "}
       <span className="font-weight-bold">
         {account.cheddarBalance}
       </span>
-      {Cheddar} {creamFarm}
+      {Cheddar} {milkFarm}
       {cheddarFarm}
       {props.pendingPixels ? <span> ({props.pendingPixels} pending)</span> : ""}
     </span>
