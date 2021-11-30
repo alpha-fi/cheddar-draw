@@ -9,7 +9,7 @@ import { Weapons } from "./Weapons";
 import Timer from "react-compound-timer";
 import Big from 'big.js';
 
-const PixelPrice = new BN("10000000000000000000000");
+//const PixelPrice = new BN("10000000000000000000000");
 const IsMainnet = window.location.hostname === "draw.cheddar.farm1";
 const TestNearConfig = {
   networkId: "testnet",
@@ -583,7 +583,7 @@ class App extends React.Component {
     account.farmingPreference === Berry.Milk ? account.numPixels + 1 : 0;
     account.cheddarPixels = this.convertToDecimals(Big((account.numPixels * this._settings.reward_rate) * (24 * 60 * 60 * 1000)).toFixed(), 24,2);
     //account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
-    console.log(account.cheddarPixels)
+    //console.log(account.cheddarPixels)
 
 
 
@@ -683,7 +683,7 @@ class App extends React.Component {
 
     this._settings = await this._contract.get_settings();
 
-    console.log(this._settings)
+    //console.log(this._settings)
 
     this._pixelCost = this._settings.milk_price;
 
@@ -1020,14 +1020,14 @@ class App extends React.Component {
   }
 
   async harvest() {
-    this.spinner();
+    //this.spinner();
     await this._contract.withdraw_crop({});
     let response = await this.refreshAccountStats();
     console.log(response)
 
-    if(response){
-      document.getElementsByClassName("loader")[0].style.display = "none";
-    }
+    // if(response){
+    //   document.getElementsByClassName("loader")[0].style.display = "none";
+    // }
   }
 
   spinner() {
@@ -1036,7 +1036,7 @@ class App extends React.Component {
 
   async buyTokens(amount) {
     const requiredBalance = Big(amount).mul(this._pixelCost).toFixed();
-    console.log(requiredBalance)
+    //console.log(requiredBalance)
     await this._contract.buy_tokens(
       {},
       new BN("30000000000000"),
