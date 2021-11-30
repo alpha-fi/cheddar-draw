@@ -581,11 +581,14 @@ class App extends React.Component {
     account.startTime = new Date().getTime();
     account.milkPixels =
     account.farmingPreference === Berry.Milk ? account.numPixels + 1 : 0;
-    account.cheddarPixels = account.numPixels;
+    account.cheddarPixels = this.convertToDecimals(Big((account.numPixels * this._settings.reward_rate) * (24 * 60 * 60 * 1000)).toFixed(), 24,2);
     //account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
+    console.log(account.cheddarPixels)
+
+
 
     
-    account.cheddarRewardPerMs = account.cheddarPixels * this._settings.reward_rate
+    account.cheddarRewardPerMs = account.numPixels * this._settings.reward_rate
     //console.log(this._settings.reward_rate)
 
     return account;
