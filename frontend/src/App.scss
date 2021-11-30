@@ -158,7 +158,7 @@ h2 {
 
 @mixin block {
   width: 100%;
-  max-width: 600px;
+  max-width: 680px;
   margin-bottom: 16px;
 }
 
@@ -259,7 +259,7 @@ Layout For Tablet / Phone
 @media (max-width: 1000px) {
   .row {
     flex-direction: column;
-    max-width: 600px;
+    max-width: 680px;
     div {
       padding-left: 0 !important;
     }

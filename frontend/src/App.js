@@ -416,6 +416,7 @@ class App extends React.Component {
     this._pendingPixels = pixels;
 
     try {
+
       await this._contract.draw(
         {
           pixels,
@@ -567,7 +568,7 @@ class App extends React.Component {
         farmingPreference: Berry.Cheddar,
       };
     } else {
-      console.log((account.avocado_balance))
+      //console.log((account.avocado_balance))
       account = {
         accountId: account.account_id,
         accountIndex: account.account_index,
@@ -579,10 +580,14 @@ class App extends React.Component {
     }
     account.startTime = new Date().getTime();
     account.milkPixels =
-      account.farmingPreference === Berry.Milk ? account.numPixels + 1 : 0;
+    account.farmingPreference === Berry.Milk ? account.numPixels + 1 : 0;
     account.cheddarPixels = account.numPixels;
-    account.milkRewardPerMs = account.milkPixels / (24 * 60 * 60 * 1000);
-    account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
+    //account.cheddarRewardPerMs = account.cheddarPixels / (24 * 60 * 60 * 1000);
+
+    
+    account.cheddarRewardPerMs = account.cheddarPixels * this._settings.reward_rate
+    //console.log(this._settings.reward_rate)
+
     return account;
   }
 
@@ -603,7 +608,7 @@ class App extends React.Component {
   }
 
   async refreshAccountStats() {
-    console.log("refreshAccountStats");
+    //console.log("refreshAccountStats");
     let account = await this.getAccount(this._accountId);
     if (this._balanceRefreshTimer) {
       clearInterval(this._balanceRefreshTimer);
@@ -620,13 +625,19 @@ class App extends React.Component {
       //console.log("_balanceRefreshTimer")
       const t = new Date().getTime() - account.startTime;
 
+      //console.log(account.cheddarRewardPerMs)
 
-      var rewards = t * Big(account.cheddarRewardPerMs).toFixed();
+      //console.log(Big(account.cheddarRewardPerMs).toFixed())
+
+
+      var rewards = t * Big(this.convertToDecimals(account.cheddarRewardPerMs, 24, 10)).toFixed();
+
+      //console.log(this.convertToDecimals(rewards, 24))
 
 
       this.setState({
         account: Object.assign({}, account, {
-          milkBalance: account.milkBalance + t * account.milkRewardPerMs,
+          milkBalance: account.milkBalance,
           cheddarBalance: Big(this.convertToDecimals(account.cheddarBalance, 24, 5)).add(rewards).toFixed(5),
         }),
         pendingPixels: this._pendingPixels.length + this._queue.length,
@@ -658,16 +669,24 @@ class App extends React.Component {
           "get_account_by_index",
           "get_lines",
           "get_line_versions",
-          "get_milk_price",
           "get_account_balance",
           "get_account_num_pixels",
           "get_account_id_by_index",
+          "get_settings",
         ],
         changeMethods: ["draw", "buy_tokens", "select_farming_preference", "withdraw_crop"],
       }
     );
-    this._pixelCost = parseFloat(await this._contract.get_milk_price());
-    console.log(await this._contract.get_milk_price())
+
+    this._settings = await this._contract.get_settings();
+
+    console.log(this._settings)
+
+    this._pixelCost = this._settings.milk_price;
+
+    this._rewardRate = this._settings.reward_rate;
+
+
     // const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
     // this._freeDrawingStart = new Date(freeDrawingTimestamp);
     // this._freeDrawingEnd = new Date(freeDrawingTimestamp + OneDayMs);
@@ -682,7 +701,7 @@ class App extends React.Component {
   }
 
   async refreshBoard(forced) {
-    console.log("refreshBoard")
+    //console.log("refreshBoard")
     if (this._refreshBoardTimer) {
       clearTimeout(this._refreshBoardTimer);
       this._refreshBoardTimer = null;
@@ -1013,7 +1032,8 @@ class App extends React.Component {
   }
 
   async buyTokens(amount) {
-    const requiredBalance = PixelPrice.muln(amount);
+    const requiredBalance = Big(amount).mul(this._pixelCost).toFixed();
+    console.log(requiredBalance)
     await this._contract.buy_tokens(
       {},
       new BN("30000000000000"),
@@ -1022,7 +1042,7 @@ class App extends React.Component {
   }
 
   setHover(accountIndex, v) {
-    console.log(accountIndex)
+    //console.log(accountIndex)
     if (v) {
       this.setState(
         {
@@ -1214,30 +1234,30 @@ class App extends React.Component {
         <div className={`buttons${watchClass}`}>
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokens(10)}
+            onClick={() => this.buyTokens(40)}
           >
-            Buy <span className="font-weight-bold">20{Milk}</span> for{" "}
+            Buy <span className="font-weight-bold">40{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.1</span>
           </button>{" "}
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokens(40)}
+            onClick={() => this.buyTokens(160)}
           >
-            Buy <span className="font-weight-bold">80{Milk}</span> for{" "}
+            Buy <span className="font-weight-bold">160{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ0.4</span>
           </button>{" "}
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokens(100)}
+            onClick={() => this.buyTokens(400)}
           >
-            Buy <span className="font-weight-bold">200{Milk}</span> for{" "}
+            Buy <span className="font-weight-bold">400{Milk}</span> for{" "}
             <span className="font-weight-bold">Ⓝ1</span>
           </button>{" "}
           <button
             className="btn btn-success"
-            onClick={() => this.buyTokens(500)}
+            onClick={() => this.buyTokens(2000)}
           >
-            DEAL: Buy <span className="font-weight-bold">1200{Milk}</span>{" "}
+            DEAL: Buy <span className="font-weight-bold">2400{Milk}</span>{" "}
             for <span className="font-weight-bold">Ⓝ5</span>
           </button>{" "}
         </div>
@@ -1286,7 +1306,7 @@ class App extends React.Component {
         <div id="harvest">
           <br/>
           <div className="row">
-            <div style={{ 'maxWidth': "600px" }}>
+            <div style={{ 'maxWidth': "680px", 'minWidth': "680px"}}>
               <div className="banner"><span>🤖 NO Bots! 🥺 NO Board Hogs! 🎨 HAVE FUN!!</span><br/><span className="warning">We reserve the right to ban players.</span></div>
               
               <span className="myBoardLabel">View My Board: </span>
@@ -1304,7 +1324,7 @@ class App extends React.Component {
                 checkedIcon={<div className="switch-berry banana">{Cheddar}</div>}
               />
 
-              <button
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button
                 className="btn btn-primary harvest"
                 onClick={() => this.harvest()}
                 style={{visibility: this.state.account.cheddarBalance > 0 ? 'visible' : 'hidden' }}
@@ -1314,7 +1334,7 @@ class App extends React.Component {
               </button>
 
             </div>
-            <div style={{ width: "380px" }}>
+            <div style={{ width: "325.75px" }}>
             </div>
           </div>
         </div>
