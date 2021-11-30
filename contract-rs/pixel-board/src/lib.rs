@@ -98,6 +98,13 @@ impl Place {
         place
     }
 
+    pub fn get_settings(&self) -> Settings {
+        Settings {
+            reward_rate: (self.reward_rate * 1_000_000).into(),
+            milk_price: self.milk_price.into(),
+        }
+    }
+
     pub fn register_account(&mut self) {
         self.assert_active();
         let account = self.get_mut_account(&env::predecessor_account_id());
@@ -106,10 +113,6 @@ impl Place {
 
     pub fn account_exists(&self, account_id: ValidAccountId) -> bool {
         self.account_indices.contains_key(account_id.as_ref())
-    }
-
-    pub fn get_milk_price(&self) -> U128 {
-        self.milk_price.into()
     }
 
     #[payable]
