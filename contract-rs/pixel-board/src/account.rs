@@ -171,15 +171,8 @@ impl Place {
                 .insert(&account.account_id, &account_index);
             self.accounts.insert(&account_index, &account.into());
             self.num_accounts += 1;
-        } else if self
-            .accounts
-            .insert(&account_index, &account.into())
-            .is_none()
-        {
-            // Need to delete the old value using a hack. This will make the vector inconsistent
-            let mut raw_key = [b'a'; 1 + core::mem::size_of::<u64>()];
-            raw_key[1..].copy_from_slice(&(u64::from(account_index).to_le_bytes()[..]));
-            env::storage_remove(&raw_key);
+        } else {
+            self.accounts.insert(&account_index, &account.into());
         }
     }
 }

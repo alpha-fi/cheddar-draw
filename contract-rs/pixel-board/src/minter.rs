@@ -28,8 +28,7 @@ impl Place {
             }
             PromiseResult::Failed => {
                 let mut a = self.get_mut_account(&receiver);
-                self.touch(&mut a);
-                a.balances[Berry::Cheddar as usize] = 0;
+                a.balances[Berry::Cheddar as usize] = amount;
                 self.save_account(a);
                 env::log(format!("Refund {} to {}", amount, receiver,).as_bytes());
             }

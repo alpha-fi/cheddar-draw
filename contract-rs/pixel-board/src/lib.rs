@@ -69,7 +69,7 @@ impl Place {
     #[init]
     pub fn new(cheddar: ValidAccountId, admin: ValidAccountId, treasury: ValidAccountId) -> Self {
         assert!(!env::state_exists(), "Already initialized");
-        let mut place = Self {
+        let /* mut */ place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
             accounts: LookupMap::new(b"u".to_vec()),
             num_accounts: 0,
@@ -91,9 +91,9 @@ impl Place {
             blacklist: LookupSet::new(b"b".to_vec()),
         };
 
-        let mut account = Account::new(env::current_account_id(), 0);
-        account.num_pixels = TOTAL_NUM_PIXELS;
-        place.save_account(account);
+        // let mut account = Account::new(env::current_account_id(), 0);
+        // account.num_pixels = TOTAL_NUM_PIXELS;
+        // place.save_account(account);
 
         place
     }
@@ -157,7 +157,7 @@ impl Place {
 
     pub fn withdraw_crop(&mut self) {
         let recipient = env::predecessor_account_id();
-        assert!(self.blacklist.contains(&recipient), "Account blacklisted");
+        assert!(!self.blacklist.contains(&recipient), "Account blacklisted");
 
         let mut account = self
             .get_internal_account_by_id(&recipient)
