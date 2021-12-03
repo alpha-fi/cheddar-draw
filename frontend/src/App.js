@@ -1032,20 +1032,37 @@ class App extends React.Component {
     theButton.classList.add("button--loading");
     theButton.style.background = "gold";
 
-    var response = await this._account.functionCall({
-      contractId: "farm-draw3.cheddar.testnet",
-      methodName: "withdraw_crop",
-      args: {},
-      gas: "300000000000000",
-      attachedDeposit: 0,
-    });
+    try {
+
+      var response = await this._account.functionCall({
+        contractId: "farm-draw3.cheddar.testnet",
+        methodName: "withdraw_crop",
+        args: {},
+        gas: "300000000000000",
+        attachedDeposit: 0,
+      });
+
+    } catch (error) {
+        
+        theButton.classList.remove("button--loading");
+        theButton.style.background = "white";
+
+        const msg = error.toString();
+
+        if (msg.indexOf("does not have enough balance") !== -1) {
+          await this.refreshAllowance();
+          return;
+        }
+
+        console.log("Failed to send a transaction", error);
+     }
 
     await this.refreshAccountStats();
 
     if(response){
+      
       theButton.classList.remove("button--loading");
       theButton.style.background = "white";
-      //document.getElementsByClassName("loader")[0].style.display = "none";
 
       var outcome = response.receipts_outcome[3].outcome.logs[0];
       if(outcome.includes("cheddar withdrew successfully")) {
