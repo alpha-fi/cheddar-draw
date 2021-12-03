@@ -1426,8 +1426,6 @@ show = () => {
 
               </div>
               <div>
-                <h1>React Snackbar Demo</h1>
-                  Click here to: <input type="button" value="Show" onClick={this.show} />
                 <ReactSnackBar Icon={<span>🧀</span>} Show={this.state.Show}>
                   Cheddar Successfully Harvested!
                 </ReactSnackBar>
