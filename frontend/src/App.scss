@@ -367,4 +367,45 @@ Layout For Tablet / Phone
   font-size: 1.2rem;
 }
 
+.button--loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    border: 4px solid transparent;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: button-loading-spinner 1s ease infinite;
+}
+
+@keyframes button-loading-spinner {
+    from {
+        transform: rotate(0turn);
+    }
+
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+.btn.btn-primary.harvest {
+    position: relative;
+    cursor: pointer;
+}
+
+.btn.btn-primary.harvest:active {
+    background: #007a63;
+}
+
+.btn.btn-primary.harvest__text {
+    font: bold 20px 'Quicksand', san-serif;
+    color: #ffffff;
+    transition: all 0.2s;
+}
+
 

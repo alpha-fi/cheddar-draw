@@ -8,6 +8,8 @@ import Switch from "react-switch";
 import { Weapons } from "./Weapons";
 import Timer from "react-compound-timer";
 import Big from 'big.js';
+import ReactSnackBar from "react-js-snackbar";
+
 
 //const PixelPrice = new BN("10000000000000000000000");
 const IsMainnet = window.location.hostname === "draw.cheddar.farm1";
@@ -176,7 +178,11 @@ class App extends React.Component {
       ((timeMs - new Date("2021-05-09")) % (7 * OneDayMs)) +
       OneDayMs * 6;
 
+
+
     this.state = {
+      Show: false,
+      Showing: false,
       connected: false,
       signedIn: false,
       accountId: null,
@@ -1020,14 +1026,33 @@ class App extends React.Component {
   }
 
   async harvest() {
-    //this.spinner();
-    await this._contract.withdraw_crop({});
-    let response = await this.refreshAccountStats();
-    console.log(response)
 
-    // if(response){
-    //   document.getElementsByClassName("loader")[0].style.display = "none";
-    // }
+    //this.spinner();
+    const theButton = document.querySelector(".btn.btn-primary.harvest");
+    theButton.classList.add("button--loading");
+    theButton.style.background = "gold";
+
+    var response = await this._account.functionCall({
+      contractId: "farm-draw3.cheddar.testnet",
+      methodName: "withdraw_crop",
+      args: {},
+      gas: "300000000000000",
+      attachedDeposit: 0,
+    });
+
+    await this.refreshAccountStats();
+
+    if(response){
+      theButton.classList.remove("button--loading");
+      theButton.style.background = "white";
+      //document.getElementsByClassName("loader")[0].style.display = "none";
+
+      var outcome = response.receipts_outcome[3].outcome.logs[0];
+      if(outcome.includes("cheddar withdrew successfully")) {
+        //alert("Cheddar Harvested Successfully!")
+        this.show();
+      }
+    }
   }
 
   spinner() {
@@ -1159,6 +1184,15 @@ class App extends React.Component {
       return fractional;
     return integer + fractional;
 }
+
+show = () => {
+    if (this.state.Showing) return;
+
+    this.setState({ Show: true, Showing: true });
+    setTimeout(() => {
+      this.setState({ Show: false, Showing: false });
+    }, 2000);
+  };
 
   render() {
     const watchClass = this.state.watchMode ? " hidden" : "";
@@ -1390,6 +1424,13 @@ class App extends React.Component {
             <div>
               <div style={{'textAlign': "right"}}>
 
+              </div>
+              <div>
+                <h1>React Snackbar Demo</h1>
+                  Click here to: <input type="button" value="Show" onClick={this.show} />
+                <ReactSnackBar Icon={<span>🧀</span>} Show={this.state.Show}>
+                  Cheddar Successfully Harvested!
+                </ReactSnackBar>
               </div>
               <div>
                 <canvas
