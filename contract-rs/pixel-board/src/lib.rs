@@ -10,8 +10,9 @@ const STORAGE_PRICE_PER_BYTE: Balance = 100_000_000_000_000_000_000;
 pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
 const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
-
 const SAFETY_BAR: Balance = 30 * ONE_NEAR;
+
+const FROM_NANO: u64 = 1_000_000_000;
 
 pub mod account;
 pub use crate::account::*;
@@ -52,10 +53,15 @@ pub struct Place {
     pub admin: AccountId,
     pub cheddar: AccountId,
     pub treasury: AccountId,
-    pub mint_funded: u32,     // number of funded mints - deleted accounts
-    pub reward_rate: Balance, // reward per pixel per nanosecond
-    pub milk_price: Balance,  // pixel token price in NEAR
+    /// number of funded mints - deleted accounts
+    pub mint_funded: u32,
+    /// reward per pixel per nanosecond
+    pub reward_rate: Balance,
+    /// pixel token price in NEAR
+    pub milk_price: Balance,
     pub blacklist: LookupSet<AccountId>,
+    /// time when the game will finish in nanoseconds
+    pub ends: u64,
 }
 
 impl Default for Place {
@@ -67,7 +73,13 @@ impl Default for Place {
 #[near_bindgen]
 impl Place {
     #[init]
-    pub fn new(cheddar: ValidAccountId, admin: ValidAccountId, treasury: ValidAccountId) -> Self {
+    /// `end` is a unix timestamp when the game will start (in seconds)
+    pub fn new(
+        cheddar: ValidAccountId,
+        admin: ValidAccountId,
+        treasury: ValidAccountId,
+        ends: u64,
+    ) -> Self {
         assert!(!env::state_exists(), "Already initialized");
         let /* mut */ place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
@@ -84,11 +96,12 @@ impl Place {
             cheddar: cheddar.into(),
             treasury: treasury.into(),
             mint_funded: 0,
-            // Initial reward is 0.8 cheddar per day per pixel.
-            // that is 80**2 *0.8 = 5120 / day
-            reward_rate: ONE_NEAR * 4 / (5 * 24 * 60 * 60 * 1_000_000_000),
+            // Initial reward is 1 cheddar per day per pixel.
+            // that is 80**2 = 6400 / day in total
+            reward_rate: ONE_NEAR / ( 24 * 60 * 60 * u128::from(FROM_NANO)),
             milk_price: ONE_NEAR / 400,
             blacklist: LookupSet::new(b"b".to_vec()),
+            ends: ends * FROM_NANO,
         };
 
         // let mut account = Account::new(env::current_account_id(), 0);

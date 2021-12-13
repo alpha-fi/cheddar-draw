@@ -112,9 +112,12 @@ impl Account {
     }
 
     /// Updates the account balance, returns number of farmed tokens.
-    pub fn touch(&mut self, reward_rate: Balance) -> Balance {
-        let block_timestamp = env::block_timestamp();
+    pub fn touch(&mut self, reward_rate: Balance, ends: u64) -> Balance {
+        let block_timestamp = std::cmp::min(env::block_timestamp(), ends);
         let time_diff = block_timestamp - self.claim_timestamp;
+        if time_diff == 0 {
+            return 0;
+        }
         let farmed = Balance::from(self.num_pixels) * Balance::from(time_diff) * reward_rate;
         self.claim_timestamp = block_timestamp;
         self.balances[Berry::Cheddar as usize] += farmed;
@@ -158,7 +161,7 @@ impl Place {
 
     /// Updates account state & farmed balance
     pub(crate) fn touch(&mut self, account: &mut Account) {
-        let farmed = account.touch(self.reward_rate);
+        let farmed = account.touch(self.reward_rate, self.ends);
         if farmed > 0 {
             self.farmed_cheddar += farmed;
         }
@@ -182,7 +185,7 @@ impl Place {
     pub fn get_account_by_index(&self, account_index: AccountIndex) -> Option<HumanAccount> {
         self.get_internal_account_by_index(account_index)
             .map(|mut account| {
-                account.touch(self.reward_rate);
+                account.touch(self.reward_rate, self.ends);
                 account.into()
             })
     }
@@ -190,7 +193,7 @@ impl Place {
     pub fn get_account(&self, account_id: ValidAccountId) -> Option<HumanAccount> {
         self.get_internal_account_by_id(account_id.as_ref())
             .map(|mut account| {
-                account.touch(self.reward_rate);
+                account.touch(self.reward_rate, self.ends);
                 account.into()
             })
     }
@@ -198,7 +201,7 @@ impl Place {
     // returns amount of Cream tokens
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
-            a.touch(self.reward_rate);
+            a.touch(self.reward_rate, self.ends);
             return a.balances[Berry::Milk as usize].try_into().unwrap();
         }
         return DEFAULT_MILK_BALANCE;
