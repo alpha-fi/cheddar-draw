@@ -60,6 +60,7 @@ pub struct Place {
     /// pixel token price in NEAR
     pub milk_price: Balance,
     pub blacklist: LookupSet<AccountId>,
+    pub starts: u64,
     /// time when the game will finish in nanoseconds
     pub ends: u64,
 }
@@ -101,6 +102,7 @@ impl Place {
             reward_rate: ONE_NEAR / ( 24 * 60 * 60 * u128::from(FROM_NANO)),
             milk_price: ONE_NEAR / 400,
             blacklist: LookupSet::new(b"b".to_vec()),
+            starts: 0,  // placeholder for the moment
             ends: ends * FROM_NANO,
         };
 
