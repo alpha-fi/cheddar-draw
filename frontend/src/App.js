@@ -12,7 +12,7 @@ import ReactSnackBar from "react-js-snackbar";
 
 
 //const PixelPrice = new BN("10000000000000000000000");
-const IsMainnet = window.location.hostname === "draw.cheddar.farm1";
+const IsMainnet = window.location.hostname === "draw.cheddar.farm";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
@@ -22,10 +22,10 @@ const TestNearConfig = {
 const MainNearConfig = {
   networkId: "mainnet",
   nodeUrl: "https://rpc.mainnet.near.org",
-  contractName: "farm-draw3.cheddar.testnet",
+  contractName: "farm-draw.cheddar.near",
   walletUrl: "https://wallet.near.org",
 };
-const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
+const NearConfig = MainNearConfig;
 
 const Milk = (
   <span role="img" aria-label="milk" className="berry">
@@ -432,12 +432,22 @@ class App extends React.Component {
       this._numFailedTxs = 0;
     } catch (error) {
       const msg = error.toString();
+
       if (msg.indexOf("does not have enough balance") !== -1) {
         await this.refreshAllowance();
         return;
       }
+
+      if (msg.indexOf("Game is over") !== -1) {
+        alert("The Game is not running.")
+        this._pendingPixels = [];
+        this._queue = [];
+      }
+
       console.log("Failed to send a transaction", error);
+
       this._numFailedTxs += 1;
+
       if (this._numFailedTxs < 3) {
         this._queue = this._queue.concat(this._pendingPixels);
         this._pendingPixels = [];
@@ -595,6 +605,7 @@ class App extends React.Component {
 
     
     account.cheddarRewardPerMs = account.numPixels * this._settings.reward_rate
+    
     //console.log(this._settings.reward_rate)
 
     return account;
@@ -1035,7 +1046,7 @@ class App extends React.Component {
     try {
 
       var response = await this._account.functionCall({
-        contractId: "farm-draw3.cheddar.testnet",
+        contractId: "farm-draw.cheddar.near",
         methodName: "withdraw_crop",
         args: {},
         gas: "300000000000000",
@@ -1067,7 +1078,8 @@ class App extends React.Component {
       var outcome = response.receipts_outcome[3].outcome.logs[0];
       if(outcome.includes("cheddar withdrew successfully")) {
         //alert("Cheddar Harvested Successfully!")
-        this.show();
+
+        this.show(outcome);
       }
     }
   }
@@ -1202,13 +1214,17 @@ class App extends React.Component {
     return integer + fractional;
 }
 
-show = () => {
+show = (outcome) => {
+    console.log(outcome)
     if (this.state.Showing) return;
 
     this.setState({ Show: true, Showing: true });
+    var el = document.querySelector(".sc-bxivhb.inAQjx")
+    var message = outcome.split(' ');
+    el.innerText = this.convertToDecimals(message[3], 24, 5) + " Cheddar Harvested!";
     setTimeout(() => {
       this.setState({ Show: false, Showing: false });
-    }, 2000);
+    }, 3000);
   };
 
   render() {
@@ -1360,7 +1376,7 @@ show = () => {
         <div id="harvest">
           <br/>
           <div className="row">
-            <div style={{ 'maxWidth': "680px", 'minWidth': "680px"}}>
+            <div id="actions" style={{ 'maxWidth': "680px"}}>
               <div className="banner"><span>🤖 NO Bots! 🥺 NO Board Hogs! 🎨 HAVE FUN!!</span><br/><span className="warning">We reserve the right to ban players.</span></div>
               
               <span className="myBoardLabel">View My Board: </span>
