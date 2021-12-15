@@ -25,7 +25,7 @@ const MainNearConfig = {
   contractName: "farm-draw.cheddar.near",
   walletUrl: "https://wallet.near.org",
 };
-const NearConfig = MainNearConfig;
+const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
 
 const Milk = (
   <span role="img" aria-label="milk" className="berry">
