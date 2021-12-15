@@ -28,9 +28,21 @@ Cream is denominated in full  values (1e1) instead of 1e24
 + account:
 
 #+BEGIN_SRC shell
-CTR=farm-draw3.cheddar.testnet
+CTR=farm-draw4.cheddar.testnet
 CHEDDAR=token-v3.cheddar.testnet
 // needs account with at least 4 NEAR
 near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token-v3.cheddar.testnet", "admin": "cheddar.testnet", "treasury": "treasury1.cheddar.testnet"}' --accountId $CTR --initGas=200000000000000
 near call $CHEDDAR add_minter '{"account_id":"farm-draw3.cheddar.testnet"}' --accountId cheddar.testnet --depositYocto 1
+#+END_SRC
+
+* Mainnet
+
+#+BEGIN_SRC shell
+CTR=farm-draw.cheddar.near
+CHEDDAR=token.cheddar.near
+// needs account with at least 4 NEAR
+// ends: Sat Dec 25 2021 18:00:00 GMT+0000
+// https://explorer.mainnet.near.org/transactions/GTPdPCuewzZHsWnsUsFakSW9vrAfQXuuo8AEMRj8xSDg
+near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token.cheddar.near", "admin": "cheddar.near", "treasury": "treasury.cheddar.near", "ends": "1640455200"}' --accountId $CTR --initGas=200000000000000
+near call $CHEDDAR add_minter '{"account_id":"farm-draw.cheddar.near"}' --accountId cheddar.near --depositYocto 1
 #+END_SRC

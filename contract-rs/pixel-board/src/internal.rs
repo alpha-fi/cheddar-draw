@@ -15,7 +15,7 @@ impl Place {
 
     pub(crate) fn assert_active(&self) {
         assert!(self.is_active, "Smart contract is deactivated");
-        assert!(self.ends <= env::block_timestamp(), "Game is over");
+        assert!(env::block_timestamp() <= self.ends, "Game is over");
     }
 }
 
