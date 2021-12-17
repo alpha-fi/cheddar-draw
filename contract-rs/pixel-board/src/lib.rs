@@ -21,11 +21,13 @@ pub mod board;
 pub use crate::board::*;
 
 mod fungible_token_storage;
-mod internal;
-mod minter;
-
 pub use crate::fungible_token_storage::*;
+
+mod minter;
 use crate::internal::*;
+
+mod internal;
+pub mod stats;
 
 #[global_allocator]
 static ALLOC: near_sdk::wee_alloc::WeeAlloc<'_> = near_sdk::wee_alloc::WeeAlloc::INIT;
