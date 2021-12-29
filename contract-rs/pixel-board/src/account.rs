@@ -2,9 +2,10 @@ use std::convert::TryInto;
 
 use crate::*;
 
+use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::{env, near_bindgen, AccountId};
+use near_sdk::{env, near_bindgen, AccountId, PromiseOrValue};
 
 pub const ONE_NEAR: Balance = 1_000_000_000_000_000_000_000_000;
 pub const MIN_AMOUNT_FOR_DISCOUNT: Balance = 5 * ONE_NEAR;
@@ -100,7 +101,7 @@ impl Account {
         let near_int = near_amount / ONE_NEAR;
         env::log(
             format!(
-                "Purchased {} Cream tokens for {}.{:03} NEAR",
+                "Purchased {} Milk tokens for {}.{:03} NEAR",
                 amount,
                 near_int,
                 (near_amount - near_int * ONE_NEAR) / (ONE_NEAR / 1000),
@@ -108,6 +109,25 @@ impl Account {
             .as_bytes(),
         );
         self.balances[Berry::Milk as usize] += amount;
+        amount
+    }
+
+    pub fn buy_milk_with_cheddar(&mut self, cheddar: Balance, milk_price: Balance) -> Balance {
+        let owned_cheddar = self.balances[Berry::Cheddar as usize];
+        assert!(owned_cheddar >= cheddar, "not enough balance");
+        let amount = cheddar / milk_price;
+        let cheddar_int = cheddar / ONE_NEAR;
+        env::log(
+            format!(
+                "Purchased {} Milk tokens for {}.{:03} Cheddar",
+                amount,
+                cheddar_int,
+                (cheddar - cheddar_int * ONE_NEAR) / (ONE_NEAR / 1000),
+            )
+            .as_bytes(),
+        );
+        self.balances[Berry::Milk as usize] += amount;
+        self.balances[Berry::Cheddar as usize] = owned_cheddar - cheddar;
         amount
     }
 
@@ -198,7 +218,7 @@ impl Place {
             })
     }
 
-    // returns amount of Cream tokens
+    // returns amount of Milk tokens
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
             a.touch(self.reward_rate, self.ends);
@@ -216,5 +236,35 @@ impl Place {
     pub fn get_account_id_by_index(&self, account_index: AccountIndex) -> Option<AccountId> {
         self.get_internal_account_by_index(account_index)
             .map(|account| account.account_id)
+    }
+}
+
+// token deposits are done through NEP-141 ft_transfer_call to the NEARswap contract.
+#[near_bindgen]
+impl FungibleTokenReceiver for Place {
+    /**
+    FungibleTokenReceiver implementation
+    Callback on receiving tokens by this contract.
+    Returns zero.
+    Panics when account is not registered or when receiving a wrong token. */
+    #[allow(unused_variables)]
+    fn ft_on_transfer(
+        &mut self,
+        sender_id: ValidAccountId,
+        amount: U128,
+        msg: String,
+    ) -> PromiseOrValue<U128> {
+        self.assert_active();
+        let token = env::predecessor_account_id();
+        assert!(
+            token == self.cheddar,
+            "Only cheddar token transfers are accepted",
+        );
+        assert!(amount.0 > 0, "amount must be positive");
+        let sender_id: &AccountId = sender_id.as_ref();
+        let mut a = self.get_internal_account_by_id(sender_id).unwrap();
+        a.balances[Berry::Cheddar as usize] += amount.0;
+        self.save_account(a);
+        return PromiseOrValue::Value(U128(0));
     }
 }

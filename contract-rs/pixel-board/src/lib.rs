@@ -143,9 +143,18 @@ impl Place {
         );
 
         let mut account = self.get_mut_account(&env::predecessor_account_id());
-        let minted_amount = account.buy_tokens(near_amount, self.milk_price);
+        let a = account.buy_tokens(near_amount, self.milk_price);
         self.save_account(account);
-        self.bought_balances[Berry::Milk as usize] += minted_amount;
+        self.bought_balances[Berry::Milk as usize] += a;
+    }
+
+    pub fn buy_milk_with_cheddar(&mut self, spent_cheddar: U128) {
+        self.assert_active();
+
+        let mut account = self.get_mut_account(&env::predecessor_account_id());
+        let x = account.buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price / 120);
+        self.save_account(account);
+        self.bought_balances[Berry::Milk as usize] += x;
     }
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
@@ -255,6 +264,12 @@ impl Place {
     pub fn set_milk_price(&mut self, price: U128) {
         self.only_admin();
         self.milk_price = price.into();
+    }
+
+    /// set end date in unix timestamp (seconds)
+    pub fn set_end(&mut self, ends: u64) {
+        self.only_admin();
+        self.ends = ends * FROM_NANO;
     }
 
     pub fn add_to_blacklist(&mut self, account: AccountId) {

@@ -17,11 +17,11 @@ Functions:
 - added ~get_milk_price~
 
 Values:
-- pixel cost = 1 Cream  (instead of 1e18)
-- pixel token (cream) price = 1NEAR -> 400 (instead of 1/250)
-- DEFAULT_CREAM_BALANCE = 2 (instead of 25)
+- pixel cost = 1 Milk  (instead of 1e18)
+- pixel token (milk) price = 1NEAR -> 400 (instead of 1/250)
+- DEFAULT_MILK_BALANCE = 2 (instead of 25)
 
-Cream is denominated in full  values (1e1) instead of 1e24
+Milk is denominated in full  values (1e1) instead of 1e24
 
 * Testnet
 
@@ -31,8 +31,13 @@ Cream is denominated in full  values (1e1) instead of 1e24
 CTR=farm-draw4.cheddar.testnet
 CHEDDAR=token-v3.cheddar.testnet
 // needs account with at least 4 NEAR
-near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token-v3.cheddar.testnet", "admin": "cheddar.testnet", "treasury": "treasury1.cheddar.testnet"}' --accountId $CTR --initGas=200000000000000
-near call $CHEDDAR add_minter '{"account_id":"farm-draw3.cheddar.testnet"}' --accountId cheddar.testnet --depositYocto 1
+near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token-v3.cheddar.testnet", "admin": "cheddar.testnet", "treasury": "treasury1.cheddar.testnet", "ends": 1641773709}' --accountId $CTR --initGas=200000000000000
+near call $CHEDDAR add_minter '{"account_id":"farm-draw4.cheddar.testnet"}' --accountId cheddar.testnet --depositYocto 1
+
+near call $CHEDDAR storage_deposit '{"account_id": "farm-draw4.cheddar.testnet"}' --accountId cheddar.testnet --amount 0.01 --gas 200000000000000
+near call $CHEDDAR ft_transfer_call '{"receiver_id": "farm-draw4.cheddar.testnet", "amount": "1000000000000000000000000", "msg": "to farm"}' --accountId robertz.testnet --depositYocto 1 --gas 200000000000000
+near call $CTR buy_milk_with_cheddar '{"spent_cheddar": "500000000000000000000000"}' --accountId robertz.testnet
+near view $CTR get_account '{"account_id": "robertz.testnet"}'
 #+END_SRC
 
 * Mainnet
