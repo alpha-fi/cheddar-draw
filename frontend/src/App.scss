@@ -44,6 +44,34 @@ h2 {
   }
 }
 
+.cheddar-buttons .btn {
+  border: 2px solid gold;
+  padding: 8px;
+  height: 32px;
+  background: white;
+  border-radius: 16px;
+  margin: 4px 16px 8px 0;
+  line-height: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  color: black;
+  &:disabled {
+    border-color: #ccc !important;;
+    background: white !important;
+    color: #ccc !important;
+  }
+  &:focus {
+    outline: none;
+  }
+  &:hover {
+    background: gold;
+  }
+  &:active {
+    color: white;
+    background: #0072CE;
+  }
+}
+
 .btn-success {
   border: 2px solid #00CE33;
   &:hover {
@@ -305,7 +333,7 @@ Layout For Tablet / Phone
   }
 }
 
-.your-balance, .buttons, .color-picker {
+.your-balance, .buttons, .cheddar-buttons, .color-picker {
   padding: 0 1rem;
 }
 

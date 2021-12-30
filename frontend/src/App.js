@@ -9,6 +9,7 @@ import { Weapons } from "./Weapons";
 import Timer from "react-compound-timer";
 import Big from 'big.js';
 import ReactSnackBar from "react-js-snackbar";
+import { checkRedirectSearchParams } from './checkRedirectSearchParams';
 
 
 //const PixelPrice = new BN("10000000000000000000000");
@@ -16,14 +17,18 @@ const IsMainnet = window.location.hostname === "draw.cheddar.farm";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
-  contractName: "farm-draw3.cheddar.testnet",
+  contractName: "farm-draw4.cheddar.testnet",
+  tokenContractName: "token-v3.cheddar.testnet",
   walletUrl: "https://wallet.testnet.near.org",
+  explorerUrl: "https://explorer.testnet.near.org"
 };
 const MainNearConfig = {
   networkId: "mainnet",
   nodeUrl: "https://rpc.mainnet.near.org",
   contractName: "farm-draw.cheddar.near",
+  tokenContractName: "token.cheddar.near",
   walletUrl: "https://wallet.near.org",
+  explorerUrl: "https://explorer.near.org"
 };
 const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
 
@@ -666,6 +671,7 @@ class App extends React.Component {
   }
 
   async _initNear() {
+
     const keyStore = new nearAPI.keyStores.BrowserLocalStorageKeyStore();
     const near = await nearAPI.connect(
       Object.assign({ deps: { keyStore } }, NearConfig)
@@ -677,9 +683,10 @@ class App extends React.Component {
       near,
       NearConfig.contractName
     );
-    this._accountId = this._walletConnection.getAccountId();
 
+    this._accountId = this._walletConnection.getAccountId();
     this._account = this._walletConnection.account();
+
     this._contract = new nearAPI.Contract(
       this._account,
       NearConfig.contractName,
@@ -694,9 +701,57 @@ class App extends React.Component {
           "get_account_id_by_index",
           "get_settings",
         ],
-        changeMethods: ["draw", "buy_tokens", "select_farming_preference", "withdraw_crop"],
+        changeMethods: ["draw", "buy_tokens", "buy_milk_with_cheddar", "select_farming_preference", "withdraw_crop"],
       }
     );
+
+    this._tokenContract = new nearAPI.Contract(
+      this._account,
+      NearConfig.tokenContractName,
+      {
+        viewMethods: [
+          "ft_balance_of"
+        ],
+        changeMethods: ["ft_transfer_call"],
+      }
+    );
+
+    const { err, data, method, finalExecutionOutcome } = await checkRedirectSearchParams(this._walletConnection, NearConfig.explorerUrl || "explorer");
+
+    console.log(err)
+    console.log(data)
+    console.log(method)
+    console.log(finalExecutionOutcome)
+
+    if(method == "ft_transfer_call") {
+
+      try {
+
+        var response = await this._account.functionCall({
+          contractId: "farm-draw4.cheddar.testnet",
+          methodName: "buy_milk_with_cheddar",
+          args: {"spent_cheddar": data},
+          gas: new BN("30000000000000"),
+          attachedDeposit: 0,
+        });
+
+
+      }
+      catch(err) {
+        console.log(err)
+      }
+
+      if(response){
+        console.log(response)
+
+        var outcome = response.receipts_outcome[0].outcome.logs[0];
+        if(outcome.includes("Purchased")) {
+          this.show(outcome);
+        }
+
+      }
+
+    }
 
     this._settings = await this._contract.get_settings();
 
@@ -710,9 +765,11 @@ class App extends React.Component {
     // const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
     // this._freeDrawingStart = new Date(freeDrawingTimestamp);
     // this._freeDrawingEnd = new Date(freeDrawingTimestamp + OneDayMs);
+
     if (this._accountId) {
       await this.refreshAccountStats();
     }
+
     this._lineVersions = Array(BoardHeight).fill(-1);
     this._lines = Array(BoardHeight).fill(false);
     this._pending = Array(BoardHeight).fill(false);
@@ -1046,7 +1103,7 @@ class App extends React.Component {
     try {
 
       var response = await this._account.functionCall({
-        contractId: "farm-draw.cheddar.near",
+        contractId: "farm-draw4.cheddar.testnet",
         methodName: "withdraw_crop",
         args: {},
         gas: "300000000000000",
@@ -1096,6 +1153,70 @@ class App extends React.Component {
       new BN("30000000000000"),
       requiredBalance
     );
+  }
+
+  async buyTokensCheddar(amount) {
+    //const requiredBalance = Big(amount).mul(this._pixelCost).toFixed();
+
+    let cheddarWalletBalance = await this._tokenContract.ft_balance_of({"account_id": this.state.accountId})
+    let account = await this._contract.get_account({ account_id: this.state.accountId });
+    let cheddarBalance = this.convertToDecimals(account.banana_balance, 24, 5);
+
+    console.log(this.convertToDecimals(cheddarWalletBalance, 24, 2));
+    console.log(amount);
+    console.log(cheddarBalance)
+
+    if(cheddarBalance < amount) {
+
+      const yoctoAmount = this.convertToBase(amount.toString(), 24);
+      const contractName = NearConfig.contractName;
+      const memo = "to buy milk";
+
+      try {
+        await this._tokenContract.ft_transfer_call(
+          {'receiver_id': contractName,'amount': yoctoAmount, 'memo': memo, 'msg' : memo },
+          new BN("50000000000000"),
+          "1"
+        );
+      } catch(e) {
+        console.log(e)
+      } finally{
+
+
+      }
+
+
+
+
+      //let account = await this._contract.get_account({ account_id: this.state.accountId });
+      //let cheddarBalance = this.convertToDecimals(account.banana_balance, 24, 5);
+
+      // this.setState({
+      //   account: Object.assign({}, account, {
+      //     milkBalance: account.milkBalance,
+      //     cheddarBalance: Big(this.convertToDecimals(account.cheddarBalance, 24, 5)),
+      //   }),
+      // });
+
+      console.log(this.state.account.cheddarBalance)
+
+    }
+
+    if(this.state.account.cheddarBalance >= amount) {
+
+      const requiredBalance = this.convertToBase(amount.toString(), 24);
+      console.log(requiredBalance)
+      //console.log(requiredBalance)
+      await this._contract.buy_milk_with_cheddar(
+        {"spent_cheddar": requiredBalance},
+        new BN("30000000000000")
+      );
+
+      await this.refreshAccountStats();
+
+    }else {
+      alert("Cheddar balance too low.")
+    }
   }
 
   setHover(accountIndex, v) {
@@ -1215,13 +1336,26 @@ class App extends React.Component {
 }
 
 show = (outcome) => {
+
     console.log(outcome)
+
     if (this.state.Showing) return;
 
     this.setState({ Show: true, Showing: true });
     var el = document.querySelector(".sc-bxivhb.inAQjx")
     var message = outcome.split(' ');
-    el.innerText = this.convertToDecimals(message[3], 24, 5) + " Cheddar Harvested!";
+
+    if(outcome.includes("withdrew")) {
+      el.innerText = this.convertToDecimals(message[3], 24, 5) + " Cheddar Harvested!";
+    }
+    else if(outcome.includes("Purchased")) {
+      el.innerText = message[0] + " " + message[1] + " " + message[2] + " " + message[3];
+    }
+
+    
+
+
+
     setTimeout(() => {
       this.setState({ Show: false, Showing: false });
     }, 3000);
@@ -1329,6 +1463,29 @@ show = (outcome) => {
           >
             DEAL: Buy <span className="font-weight-bold">2400{Milk}</span>{" "}
             for <span className="font-weight-bold">Ⓝ5</span>
+          </button>{" "}
+        </div>
+        <div className={`cheddar-buttons${watchClass}`}>
+          <button
+            className="btn btn-primary"
+            onClick={() => this.buyTokensCheddar(3)}
+          >
+            Buy <span className="font-weight-bold">10{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀&nbsp;3</span>
+          </button>{" "}
+          <button
+            className="btn btn-primary"
+            onClick={() => this.buyTokensCheddar(30)}
+          >
+            Buy <span className="font-weight-bold">100{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀&nbsp;30</span>
+          </button>{" "}
+          <button
+            className="btn btn-primary"
+            onClick={() => this.buyTokensCheddar(600)}
+          >
+            Buy <span className="font-weight-bold">2000{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀 600</span>
           </button>{" "}
         </div>
         <div className={`color-picker${watchClass}`}>
