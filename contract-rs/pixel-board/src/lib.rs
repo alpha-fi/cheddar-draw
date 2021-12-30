@@ -84,7 +84,7 @@ impl Place {
         ends: u64,
     ) -> Self {
         assert!(!env::state_exists(), "Already initialized");
-        let /* mut */ place = Self {
+        let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
             accounts: LookupMap::new(b"u".to_vec()),
             num_accounts: 0,
@@ -101,16 +101,17 @@ impl Place {
             mint_funded: 0,
             // Initial reward is 1 cheddar per day per pixel.
             // that is 80**2 = 6400 / day in total
-            reward_rate: ONE_NEAR / ( 24 * 60 * 60 * u128::from(FROM_NANO)),
+            reward_rate: ONE_NEAR / (24 * 60 * 60 * u128::from(FROM_NANO)),
             milk_price: ONE_NEAR / 400,
             blacklist: LookupSet::new(b"b".to_vec()),
-            starts: 0,  // placeholder for the moment
+            starts: 0, // placeholder for the moment
             ends: ends * FROM_NANO,
         };
 
-        // let mut account = Account::new(env::current_account_id(), 0);
-        // account.num_pixels = TOTAL_NUM_PIXELS;
-        // place.save_account(account);
+        // use a good account
+        let mut account = Account::new(env::current_account_id(), 0);
+        account.num_pixels = TOTAL_NUM_PIXELS;
+        place.save_account(account);
 
         place
     }
