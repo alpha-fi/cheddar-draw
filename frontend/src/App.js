@@ -1159,14 +1159,48 @@ class App extends React.Component {
     //const requiredBalance = Big(amount).mul(this._pixelCost).toFixed();
 
     let cheddarWalletBalance = await this._tokenContract.ft_balance_of({"account_id": this.state.accountId})
+    cheddarWalletBalance = this.convertToDecimals(cheddarWalletBalance, 24, 2)
     let account = await this._contract.get_account({ account_id: this.state.accountId });
     let cheddarBalance = this.convertToDecimals(account.banana_balance, 24, 5);
 
-    console.log(this.convertToDecimals(cheddarWalletBalance, 24, 2));
-    console.log(amount);
-    console.log(cheddarBalance)
+    //console.log(this.convertToDecimals(cheddarWalletBalance, 24, 2));
+    //console.log(amount);
+    //console.log(cheddarBalance)
 
-    if(cheddarBalance < amount) {
+    if(cheddarBalance >= amount) {
+
+      try {
+        const requiredBalance = this.convertToBase(amount.toString(), 24);
+        //console.log(requiredBalance)
+        //console.log(requiredBalance)
+        var response = await this._account.functionCall({
+          contractId: "farm-draw4.cheddar.testnet",
+          methodName: "buy_milk_with_cheddar",
+          args: {"spent_cheddar": requiredBalance},
+          gas: new BN("30000000000000"),
+          attachedDeposit: 0,
+        });
+      }
+      catch(err) {
+        console.log(err);
+      }
+
+      if(response){
+        console.log(response)
+
+        var outcome = response.receipts_outcome[0].outcome.logs[0];
+        if(outcome.includes("Purchased")) {
+          this.show(outcome);
+        }
+
+      }
+
+      await this.refreshAccountStats();
+
+    }
+    else if(cheddarWalletBalance >= amount) {
+
+      console.log(cheddarWalletBalance)
 
       const yoctoAmount = this.convertToBase(amount.toString(), 24);
       const contractName = NearConfig.contractName;
@@ -1180,43 +1214,13 @@ class App extends React.Component {
         );
       } catch(e) {
         console.log(e)
-      } finally{
-
-
-      }
-
-
-
-
-      //let account = await this._contract.get_account({ account_id: this.state.accountId });
-      //let cheddarBalance = this.convertToDecimals(account.banana_balance, 24, 5);
-
-      // this.setState({
-      //   account: Object.assign({}, account, {
-      //     milkBalance: account.milkBalance,
-      //     cheddarBalance: Big(this.convertToDecimals(account.cheddarBalance, 24, 5)),
-      //   }),
-      // });
-
-      console.log(this.state.account.cheddarBalance)
-
+      } 
+      //console.log(this.state.account.cheddarBalance)
     }
-
-    if(this.state.account.cheddarBalance >= amount) {
-
-      const requiredBalance = this.convertToBase(amount.toString(), 24);
-      console.log(requiredBalance)
-      //console.log(requiredBalance)
-      await this._contract.buy_milk_with_cheddar(
-        {"spent_cheddar": requiredBalance},
-        new BN("30000000000000")
-      );
-
-      await this.refreshAccountStats();
-
-    }else {
+    else {
       alert("Cheddar balance too low.")
     }
+
   }
 
   setHover(accountIndex, v) {
@@ -1337,7 +1341,7 @@ class App extends React.Component {
 
 show = (outcome) => {
 
-    console.log(outcome)
+    //console.log(outcome)
 
     if (this.state.Showing) return;
 
@@ -1349,12 +1353,8 @@ show = (outcome) => {
       el.innerText = this.convertToDecimals(message[3], 24, 5) + " Cheddar Harvested!";
     }
     else if(outcome.includes("Purchased")) {
-      el.innerText = message[0] + " " + message[1] + " " + message[2] + " " + message[3];
+      el.innerText = "Bought " + message[1] + "🥛" + " for " + "🧀" + "   " + message[5].split(".")[0];
     }
-
-    
-
-
 
     setTimeout(() => {
       this.setState({ Show: false, Showing: false });

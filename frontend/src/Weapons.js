@@ -67,14 +67,14 @@ export class Weapons extends React.Component {
     sourceImage.onload = () => {
       let width = sourceImage.naturalWidth;
       let height = sourceImage.naturalHeight;
-      if (sourceImage.naturalWidth > 50 || sourceImage.naturalHeight > 50) {
+      if (sourceImage.naturalWidth > 80 || sourceImage.naturalHeight > 80) {
         const aspect = width / height;
         width = Math.round(20 * Math.min(1, aspect));
         height = Math.round(20 * Math.min(1, 1 / aspect));
       }
       this.setState({
-        width: Math.min(50, Math.max(1, width)),
-        height: Math.min(50, Math.max(1, height)),
+        width: Math.min(80, Math.max(1, width)),
+        height: Math.min(80, Math.max(1, height)),
       });
       this.draw();
     };
@@ -89,7 +89,7 @@ export class Weapons extends React.Component {
   }
 
   updateVal(key, value) {
-    value = Math.min(50, Math.max(1, value));
+    value = Math.min(80, Math.max(1, value));
     if (this.state.lockedAspect) {
       const aspect =
         this.sourceImage.naturalWidth / this.sourceImage.naturalHeight;
@@ -103,8 +103,8 @@ export class Weapons extends React.Component {
       }
       this.setState(
         {
-          width: Math.min(50, Math.max(1, width)),
-          height: Math.min(50, Math.max(1, height)),
+          width: Math.min(80, Math.max(1, width)),
+          height: Math.min(80, Math.max(1, height)),
         },
         () => {
           this.draw();
@@ -153,7 +153,7 @@ export class Weapons extends React.Component {
               type="number"
               value={this.state.width}
               min={1}
-              max={50}
+              max={80}
               onChange={(e) => this.updateVal("width", e.target.value)}
             />{" "}
             <button
@@ -172,7 +172,7 @@ export class Weapons extends React.Component {
               type="number"
               value={this.state.height}
               min={1}
-              max={50}
+              max={80}
               onChange={(e) => this.updateVal("height", e.target.value)}
             />
           </div>
