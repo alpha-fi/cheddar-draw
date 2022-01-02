@@ -133,18 +133,20 @@ impl Account {
 
     /// Updates the account balance, returns number of farmed tokens.
     /// + `ends` is the old end
-    pub fn touch(&mut self, reward_rate: Balance, new_start: u64, old_ends: u64) -> Balance {
-        let new_end = 1642356000 * FROM_NANO;
+    pub fn touch(&mut self, reward_rate: Balance, new_start: u64, ends: u64) -> Balance {
+        let old_ends: u64 = 1640455200 * FROM_NANO;
+        // new end: 1642356000
+
         assert!(
-            new_start > old_ends && new_end > new_start,
+            ends > new_start && new_start > old_ends,
             "logic error, start / end is wrong"
         );
         let bt = env::block_timestamp();
-        let mut claim_timestamp = std::cmp::min(bt, new_end);
+        let mut claim_timestamp = std::cmp::min(bt, ends);
         if claim_timestamp < new_start {
             claim_timestamp = new_start;
         }
-        let mut time_diff = 0; //  = claim_timestamp - new_start;
+        let mut time_diff = 0;
         if self.claim_timestamp < old_ends {
             time_diff += old_ends - self.claim_timestamp;
         }

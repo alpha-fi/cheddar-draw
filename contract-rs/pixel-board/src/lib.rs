@@ -4,6 +4,8 @@ use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, near_bindgen, AccountId, Balance, Gas, Promise};
 
+const FROM_NANO: u64 = 1_000_000_000;
+
 /// Price per 1 byte of storage from mainnet genesis config.
 const STORAGE_PRICE_PER_BYTE: Balance = 100_000_000_000_000_000_000;
 /// Basic compute.
@@ -11,8 +13,6 @@ pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
 const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
 const SAFETY_BAR: Balance = 30 * ONE_NEAR;
-
-const FROM_NANO: u64 = 1_000_000_000;
 
 pub mod account;
 pub use crate::account::*;
@@ -269,14 +269,6 @@ impl Place {
         self.milk_price = price.into();
     }
 
-    // /// sets milk price in NEAR.
-    // pub fn milk(&mut self, a: ValidAccountId) {
-    //     self.only_admin();
-    //     let mut a = self.get_mut_account(a.as_ref());
-    //     a.balances[Berry::Milk as usize] += 7000;
-    //     self.save_account(a);
-    // }
-
     // /// sets milk price in MILK.
     // pub fn set_cheddar_milk_price(&mut self, price: U128) {
     //     self.only_admin();
@@ -305,9 +297,21 @@ impl Place {
         self.blacklist.remove(&account);
     }
 
-    pub fn clear_board(&mut self) {
+    /// Dangerous: it removes the board (not only cleans the content, but
+    /// removes all board rows and cols)
+    pub fn delete_board(&mut self) {
         self.only_admin();
         self.board.lines.clear();
+    }
+
+    /// Resets the board state.
+    /// NOTE: it doesn't reward user balances, hence it should be called with caution
+    pub fn reset_board(&mut self) {
+        self.only_admin();
+        let default_line = PixelLine::default();
+        for i in 0..BOARD_HEIGHT {
+            self.board.lines.replace(i.into(), &default_line);
+        }
     }
 }
 
