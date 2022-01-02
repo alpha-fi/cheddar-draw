@@ -304,15 +304,22 @@ impl Place {
         self.board.lines.clear();
     }
 
-    /// Resets the board state.
-    /// NOTE: it doesn't reward user balances, hence it should be called with caution
-    pub fn reset_board(&mut self) {
-        self.only_admin();
-        let default_line = PixelLine::default();
-        for i in 0..BOARD_HEIGHT {
-            self.board.lines.replace(i.into(), &default_line);
-        }
-    }
+    // /// Resets the board state.
+    // /// NOTE: it doesn't reward user balances, hence it should be called with caution
+    // pub fn reset_board(&mut self) {
+    //     self.only_admin();
+    //
+    //     let default_line = PixelLine::default();
+    //     for i in 0..BOARD_HEIGHT {
+    //         // TODO: check each pixel line, add to users map and at the end itrate the map to touch users.
+    //         self.board.lines.replace(i.into(), &default_line);
+    //     }
+    //
+    //     let mut a = self.get_internal_account_by_index(0).unwrap();
+    //     self.touch(&mut a);
+    //     a.num_pixels = TOTAL_NUM_PIXELS;
+    //     self.save_account(a);
+    // }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

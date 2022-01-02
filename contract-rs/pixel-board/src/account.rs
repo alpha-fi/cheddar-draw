@@ -213,11 +213,9 @@ impl Place {
         if account_index >= self.num_accounts {
             self.account_indices
                 .insert(&account.account_id, &account_index);
-            self.accounts.insert(&account_index, &account.into());
             self.num_accounts += 1;
-        } else {
-            self.accounts.insert(&account_index, &account.into());
         }
+        self.accounts.insert(&account_index, &account.into());
     }
 }
 
