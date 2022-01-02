@@ -84,6 +84,7 @@ impl Place {
         ends: u64,
     ) -> Self {
         assert!(!env::state_exists(), "Already initialized");
+        let milk_price = ONE_NEAR / 400;
         let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
             accounts: LookupMap::new(b"u".to_vec()),
@@ -102,7 +103,7 @@ impl Place {
             // Initial reward is 1 cheddar per day per pixel.
             // that is 80**2 = 6400 / day in total
             reward_rate: ONE_NEAR / (24 * 60 * 60 * u128::from(FROM_NANO)),
-            milk_price: ONE_NEAR / 400,
+            milk_price,
             blacklist: LookupSet::new(b"b".to_vec()),
             starts: 0, // placeholder for the moment
             ends: ends * FROM_NANO,
@@ -153,6 +154,7 @@ impl Place {
         self.assert_active();
 
         let mut account = self.get_mut_account(&env::predecessor_account_id());
+        // TODO - should create a migration and put it into a state
         let x = account.buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price / 120);
         self.save_account(account);
         self.bought_balances[Berry::Milk as usize] += x;
@@ -267,10 +269,30 @@ impl Place {
         self.milk_price = price.into();
     }
 
+    // /// sets milk price in NEAR.
+    // pub fn milk(&mut self, a: ValidAccountId) {
+    //     self.only_admin();
+    //     let mut a = self.get_mut_account(a.as_ref());
+    //     a.balances[Berry::Milk as usize] += 7000;
+    //     self.save_account(a);
+    // }
+
+    // /// sets milk price in MILK.
+    // pub fn set_cheddar_milk_price(&mut self, price: U128) {
+    //     self.only_admin();
+    //     self.cheddar_milk_price = price.into();
+    // }
+
     /// set end date in unix timestamp (seconds)
     pub fn set_end(&mut self, ends: u64) {
         self.only_admin();
         self.ends = ends * FROM_NANO;
+    }
+
+    /// set end date in unix timestamp (seconds)
+    pub fn set_start(&mut self, starts: u64) {
+        self.only_admin();
+        self.starts = starts * FROM_NANO;
     }
 
     pub fn add_to_blacklist(&mut self, account: AccountId) {
