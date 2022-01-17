@@ -611,7 +611,7 @@ class App extends React.Component {
     
     account.cheddarRewardPerMs = account.numPixels * this._settings.reward_rate
     
-    //console.log(this._settings.reward_rate)
+    //console.log(this._settings)
 
     return account;
   }
@@ -672,6 +672,41 @@ class App extends React.Component {
 
   async _initNear() {
 
+    var countDownDate = new Date("Jan 2, 2022 18:00:00 UTC");
+    var countDownDate = new Date(countDownDate.getTime() - countDownDate.getTimezoneOffset() * 60000)
+
+    var x = setInterval(function() {
+
+      // Get today's date and time
+      var now = new Date().getTime();
+      var d = new Date();
+      var d = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+
+      // Find the distance between now and the count down date
+      var distance = countDownDate.getTime() - d.getTime();
+      //console.log(distance)
+
+      // Time calculations for days, hours, minutes and seconds
+      var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      // Display the result in the element with id="demo"
+      var timer = document.getElementById("timer")
+
+      if(timer) {
+        timer.innerHTML = "<h2><span style='color:#222'>Starts: </span><span style='color:rgba(80,41,254,0.88)'>" + hours + "h : " + minutes + "m : " + seconds + "s" + "</span></h2>";
+      }
+      // If the count down is finished, write some text
+      if (distance < 0) {
+        clearInterval(x);
+        if(timer) {
+          timer.style.display = "none";
+        }
+      }
+    }, 1000);
+
     const keyStore = new nearAPI.keyStores.BrowserLocalStorageKeyStore();
     const near = await nearAPI.connect(
       Object.assign({ deps: { keyStore } }, NearConfig)
@@ -700,6 +735,7 @@ class App extends React.Component {
           "get_account_num_pixels",
           "get_account_id_by_index",
           "get_settings",
+          "is_active"
         ],
         changeMethods: ["draw", "buy_tokens", "buy_milk_with_cheddar", "select_farming_preference", "withdraw_crop"],
       }
@@ -718,17 +754,17 @@ class App extends React.Component {
 
     const { err, data, method, finalExecutionOutcome } = await checkRedirectSearchParams(this._walletConnection, NearConfig.explorerUrl || "explorer");
 
-    console.log(err)
-    console.log(data)
-    console.log(method)
-    console.log(finalExecutionOutcome)
+    // console.log(err)
+    // console.log(data)
+    // console.log(method)
+    // console.log(finalExecutionOutcome)
 
     if(method == "ft_transfer_call") {
 
       try {
 
         var response = await this._account.functionCall({
-          contractId: "farm-draw4.cheddar.testnet",
+          contractId: "farm-draw.cheddar.near",
           methodName: "buy_milk_with_cheddar",
           args: {"spent_cheddar": data},
           gas: new BN("30000000000000"),
@@ -755,7 +791,9 @@ class App extends React.Component {
 
     this._settings = await this._contract.get_settings();
 
-    //console.log(this._settings)
+    this._isactive = await this._contract.is_active();
+
+    console.log(this._isactive)
 
     this._pixelCost = this._settings.milk_price;
 
@@ -1103,7 +1141,7 @@ class App extends React.Component {
     try {
 
       var response = await this._account.functionCall({
-        contractId: "farm-draw4.cheddar.testnet",
+        contractId: "farm-draw.cheddar.near",
         methodName: "withdraw_crop",
         args: {},
         gas: "300000000000000",
@@ -1174,7 +1212,7 @@ class App extends React.Component {
         //console.log(requiredBalance)
         //console.log(requiredBalance)
         var response = await this._account.functionCall({
-          contractId: "farm-draw4.cheddar.testnet",
+          contractId: "farm-draw.cheddar.near",
           methodName: "buy_milk_with_cheddar",
           args: {"spent_cheddar": requiredBalance},
           gas: new BN("30000000000000"),
@@ -1534,6 +1572,7 @@ show = (outcome) => {
           <br/>
           <div className="row">
             <div id="actions" style={{ 'maxWidth': "680px"}}>
+              <div id="timer"></div>
               <div className="banner"><span>🤖 NO Bots! 🥺 NO Board Hogs! 🎨 HAVE FUN!!</span><br/><span className="warning">We reserve the right to ban players.</span></div>
               
               <span className="myBoardLabel">View My Board: </span>
