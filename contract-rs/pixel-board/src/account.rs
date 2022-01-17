@@ -132,14 +132,35 @@ impl Account {
     }
 
     /// Updates the account balance, returns number of farmed tokens.
-    pub fn touch(&mut self, reward_rate: Balance, ends: u64) -> Balance {
-        let block_timestamp = std::cmp::min(env::block_timestamp(), ends);
-        let time_diff = block_timestamp - self.claim_timestamp;
+    /// + `ends` is the old end
+    pub fn touch(&mut self, reward_rate: Balance, new_start: u64, ends: u64) -> Balance {
+        let old_ends: u64 = 1640455200 * FROM_NANO;
+        // new end: 1642356000
+
+        assert!(
+            ends > new_start && new_start > old_ends,
+            "logic error, start / end is wrong"
+        );
+        let bt = env::block_timestamp();
+        let mut claim_timestamp = std::cmp::min(bt, ends);
+        if claim_timestamp < new_start {
+            claim_timestamp = new_start;
+        }
+        let mut time_diff = 0;
+        if self.claim_timestamp < old_ends {
+            time_diff += old_ends - self.claim_timestamp;
+        }
+        if self.claim_timestamp < new_start {
+            self.claim_timestamp = new_start;
+        }
+        if self.claim_timestamp < claim_timestamp {
+            time_diff += claim_timestamp - self.claim_timestamp
+        }
         if time_diff == 0 {
             return 0;
         }
         let farmed = Balance::from(self.num_pixels) * Balance::from(time_diff) * reward_rate;
-        self.claim_timestamp = block_timestamp;
+        self.claim_timestamp = claim_timestamp;
         self.balances[Berry::Cheddar as usize] += farmed;
         farmed
     }
@@ -181,7 +202,7 @@ impl Place {
 
     /// Updates account state & farmed balance
     pub(crate) fn touch(&mut self, account: &mut Account) {
-        let farmed = account.touch(self.reward_rate, self.ends);
+        let farmed = account.touch(self.reward_rate, self.starts, self.ends);
         if farmed > 0 {
             self.farmed_cheddar += farmed;
         }
@@ -192,11 +213,9 @@ impl Place {
         if account_index >= self.num_accounts {
             self.account_indices
                 .insert(&account.account_id, &account_index);
-            self.accounts.insert(&account_index, &account.into());
             self.num_accounts += 1;
-        } else {
-            self.accounts.insert(&account_index, &account.into());
         }
+        self.accounts.insert(&account_index, &account.into());
     }
 }
 
@@ -205,7 +224,7 @@ impl Place {
     pub fn get_account_by_index(&self, account_index: AccountIndex) -> Option<HumanAccount> {
         self.get_internal_account_by_index(account_index)
             .map(|mut account| {
-                account.touch(self.reward_rate, self.ends);
+                account.touch(self.reward_rate, self.starts, self.ends);
                 account.into()
             })
     }
@@ -213,7 +232,7 @@ impl Place {
     pub fn get_account(&self, account_id: ValidAccountId) -> Option<HumanAccount> {
         self.get_internal_account_by_id(account_id.as_ref())
             .map(|mut account| {
-                account.touch(self.reward_rate, self.ends);
+                account.touch(self.reward_rate, self.starts, self.ends);
                 account.into()
             })
     }
@@ -221,7 +240,7 @@ impl Place {
     // returns amount of Milk tokens
     pub fn get_account_balance(&self, account_id: ValidAccountId) -> u32 {
         if let Some(mut a) = self.get_internal_account_by_id(account_id.as_ref()) {
-            a.touch(self.reward_rate, self.ends);
+            a.touch(self.reward_rate, self.starts, self.ends);
             return a.balances[Berry::Milk as usize].try_into().unwrap();
         }
         return DEFAULT_MILK_BALANCE;
