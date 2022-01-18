@@ -155,7 +155,7 @@ impl Place {
 
         let mut account = self.get_mut_account(&env::predecessor_account_id());
         // TODO - should create a migration and put it into a state
-        let x = account.buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price / 120);
+        let x = account.buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price * 120);
         self.save_account(account);
         self.bought_balances[Berry::Milk as usize] += x;
     }
@@ -264,9 +264,11 @@ impl Place {
     }
 
     /// sets milk price in NEAR.
-    pub fn set_milk_price(&mut self, price: U128) {
+    pub fn milk(&mut self, a: ValidAccountId) {
         self.only_admin();
-        self.milk_price = price.into();
+        let mut a = self.get_mut_account(a.as_ref());
+        a.balances[Berry::Milk as usize] += 7000;
+        self.save_account(a);
     }
 
     // /// sets milk price in MILK.
@@ -295,6 +297,10 @@ impl Place {
     pub fn remove_from_blacklist(&mut self, account: AccountId) {
         self.only_admin();
         self.blacklist.remove(&account);
+    }
+
+    pub fn is_blacklisted(self, account: AccountId) -> bool {
+        self.blacklist.contains(&account)
     }
 
     /// Dangerous: it removes the board (not only cleans the content, but
