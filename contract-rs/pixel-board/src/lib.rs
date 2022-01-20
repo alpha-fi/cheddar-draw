@@ -263,19 +263,11 @@ impl Place {
         self.is_active = !self.is_active;
     }
 
-    /// sets milk price in NEAR.
-    pub fn milk(&mut self, a: ValidAccountId) {
+    /// sets milk price in NEAR
+    pub fn set_cheddar_milk_price(&mut self, price: U128) {
         self.only_admin();
-        let mut a = self.get_mut_account(a.as_ref());
-        a.balances[Berry::Milk as usize] += 7000;
-        self.save_account(a);
+        self.milk_price = price.into();
     }
-
-    // /// sets milk price in MILK.
-    // pub fn set_cheddar_milk_price(&mut self, price: U128) {
-    //     self.only_admin();
-    //     self.cheddar_milk_price = price.into();
-    // }
 
     /// set end date in unix timestamp (seconds)
     pub fn set_end(&mut self, ends: u64) {
