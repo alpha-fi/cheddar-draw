@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, LookupSet};
 use near_sdk::json_types::{ValidAccountId, U128};
@@ -13,6 +15,7 @@ pub(crate) const GAS_FOR_FT_MINT: Gas = 8_000_000_000_000;
 const GAS_FOR_RESOLVE_MINT: Gas = 5_000_000_000_000;
 const NO_DEPOSIT: Balance = 0;
 const SAFETY_BAR: Balance = 30 * ONE_NEAR;
+const MILK_CHEDAR_FACTOR: Balance = 160;
 
 pub mod account;
 pub use crate::account::*;
@@ -102,6 +105,7 @@ impl Place {
             mint_funded: 0,
             // Initial reward is 1 cheddar per day per pixel.
             // that is 80**2 = 6400 / day in total
+            //   updated: 0.25 cheddar / day == 2893518518 / ns
             reward_rate: ONE_NEAR / (24 * 60 * 60 * u128::from(FROM_NANO)),
             milk_price,
             blacklist: LookupSet::new(b"b".to_vec()),
@@ -155,7 +159,8 @@ impl Place {
 
         let mut account = self.get_mut_account(&env::predecessor_account_id());
         // TODO - should create a migration and put it into a state
-        let x = account.buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price * 120);
+        let x = account
+            .buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price * MILK_CHEDAR_FACTOR);
         self.save_account(account);
         self.bought_balances[Berry::Milk as usize] += x;
     }
@@ -302,22 +307,33 @@ impl Place {
         self.board.lines.clear();
     }
 
-    // /// Resets the board state.
-    // /// NOTE: it doesn't reward user balances, hence it should be called with caution
-    // pub fn reset_board(&mut self) {
-    //     self.only_admin();
-    //
-    //     let default_line = PixelLine::default();
-    //     for i in 0..BOARD_HEIGHT {
-    //         // TODO: check each pixel line, add to users map and at the end itrate the map to touch users.
-    //         self.board.lines.replace(i.into(), &default_line);
-    //     }
-    //
-    //     let mut a = self.get_internal_account_by_index(0).unwrap();
-    //     self.touch(&mut a);
-    //     a.num_pixels = TOTAL_NUM_PIXELS;
-    //     self.save_account(a);
-    // }
+    /// Resets the board state.
+    /// NOTE: should be called with caution
+    pub fn reset_board(&mut self) {
+        self.only_admin();
+
+        let default_line = PixelLine::default();
+        let mut users = HashSet::new();
+        for i in 0..BOARD_HEIGHT {
+            for pl in self.board.lines.get(i.into()) {
+                for p in pl.0 {
+                    users.insert(p.owner_id);
+                }
+            }
+            self.board.lines.replace(i.into(), &default_line);
+        }
+        for u_idx in users {
+            let mut a = self.get_internal_account_by_index(u_idx).unwrap();
+            self.touch(&mut a);
+            a.num_pixels = 0;
+            self.save_account(a);
+        }
+
+        let mut a = self.get_internal_account_by_index(0).unwrap();
+        self.touch(&mut a);
+        a.num_pixels = TOTAL_NUM_PIXELS;
+        self.save_account(a);
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -13,6 +13,7 @@ pub struct Stats {
     num_accounts: u32,
     reward_rate: U128,
     milk_price: U128,
+    cheddar_milk_price: U128,
     starts_at: u64,
     ends_at: u64,
 }
@@ -26,6 +27,7 @@ impl Place {
             num_accounts: self.num_accounts,
             reward_rate: self.reward_rate.into(),
             milk_price: self.milk_price.into(),
+            cheddar_milk_price: (self.milk_price * MILK_CHEDAR_FACTOR).into(),
             starts_at: self.starts,
             ends_at: self.ends,
         }
