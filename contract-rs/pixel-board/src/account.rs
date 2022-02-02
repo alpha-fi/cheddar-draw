@@ -134,8 +134,7 @@ impl Account {
     /// Updates the account balance, returns number of farmed tokens.
     /// + `ends` is the old end
     pub fn touch(&mut self, reward_rate: Balance, new_start: u64, ends: u64) -> Balance {
-        let old_ends: u64 = 1640455200 * FROM_NANO;
-        // new end: 1642356000
+        let old_ends: u64 = 1642356000 * FROM_NANO;
 
         assert!(
             ends > new_start && new_start > old_ends,
