@@ -13,7 +13,7 @@ import { checkRedirectSearchParams } from './checkRedirectSearchParams';
 
 
 //const PixelPrice = new BN("10000000000000000000000");
-const IsMainnet = window.location.hostname === "draw.cheddar.farm";
+const IsMainnet = window.location.hostname === "localhost";
 const TestNearConfig = {
   networkId: "testnet",
   nodeUrl: "https://rpc.testnet.near.org",
@@ -443,8 +443,8 @@ class App extends React.Component {
         return;
       }
 
-      if (msg.indexOf("Game is over") !== -1) {
-        alert("The Game is not running.")
+      if (msg.indexOf("Game is over") !== -1 || msg.indexOf("Game didn't started yet") !== -1) {
+        alert("The Game is not running or has ended.")
         this._pendingPixels = [];
         this._queue = [];
       }
@@ -611,7 +611,7 @@ class App extends React.Component {
     
     account.cheddarRewardPerMs = account.numPixels * this._settings.reward_rate
     
-    //console.log(this._settings)
+    console.log(account.numPixels * this._settings.reward_rate)
 
     return account;
   }
@@ -654,8 +654,13 @@ class App extends React.Component {
 
       //console.log(Big(account.cheddarRewardPerMs).toFixed())
 
+      let rewards = 0;
 
-      var rewards = t * Big(this.convertToDecimals(account.cheddarRewardPerMs, 24, 10)).toFixed();
+      //console.log(new Date(this._settings.end_date * 1000).getTime())
+      //console.log(new Date().getTime())
+
+      if (new Date(this._settings.end_date).getTime() <= new Date().getTime())
+        rewards = t * Big(this.convertToDecimals(account.cheddarRewardPerMs, 24, 10)).toFixed();
 
       //console.log(this.convertToDecimals(rewards, 24))
 
@@ -672,40 +677,6 @@ class App extends React.Component {
 
   async _initNear() {
 
-    var countDownDate = new Date("Jan 2, 2022 18:00:00 UTC");
-    var countDownDate = new Date(countDownDate.getTime() - countDownDate.getTimezoneOffset() * 60000)
-
-    var x = setInterval(function() {
-
-      // Get today's date and time
-      var now = new Date().getTime();
-      var d = new Date();
-      var d = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-
-      // Find the distance between now and the count down date
-      var distance = countDownDate.getTime() - d.getTime();
-      //console.log(distance)
-
-      // Time calculations for days, hours, minutes and seconds
-      var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-      // Display the result in the element with id="demo"
-      var timer = document.getElementById("timer")
-
-      if(timer) {
-        timer.innerHTML = "<h2><span style='color:#222'>Starts: </span><span style='color:rgba(80,41,254,0.88)'>" + hours + "h : " + minutes + "m : " + seconds + "s" + "</span></h2>";
-      }
-      // If the count down is finished, write some text
-      if (distance < 0) {
-        clearInterval(x);
-        if(timer) {
-          timer.style.display = "none";
-        }
-      }
-    }, 1000);
 
     const keyStore = new nearAPI.keyStores.BrowserLocalStorageKeyStore();
     const near = await nearAPI.connect(
@@ -735,7 +706,8 @@ class App extends React.Component {
           "get_account_num_pixels",
           "get_account_id_by_index",
           "get_settings",
-          "is_active"
+          "is_active",
+          "stats"
         ],
         changeMethods: ["draw", "buy_tokens", "buy_milk_with_cheddar", "select_farming_preference", "withdraw_crop"],
       }
@@ -753,6 +725,11 @@ class App extends React.Component {
     );
 
     const { err, data, method, finalExecutionOutcome } = await checkRedirectSearchParams(this._walletConnection, NearConfig.explorerUrl || "explorer");
+
+    
+    if(err) {
+      console.log(err)
+    }
 
     // console.log(err)
     // console.log(data)
@@ -775,6 +752,19 @@ class App extends React.Component {
       }
       catch(err) {
         console.log(err)
+
+        const msg = err.toString();
+
+        if (msg.indexOf("does not have enough balance") !== -1) {
+          await this.refreshAllowance();
+          return;
+        }
+
+        if (msg.indexOf("Game is over") !== -1 || msg.indexOf("Game didn't started yet") !== -1) {
+          alert("The Game is not running or has ended.")
+          this._pendingPixels = [];
+          this._queue = [];
+        }
       }
 
       if(response){
@@ -793,11 +783,90 @@ class App extends React.Component {
 
     this._isactive = await this._contract.is_active();
 
-    console.log(this._isactive)
+    this._stats = await this._contract.stats();
+
+    console.log(this._stats)
+
+    this._settings.end_date = "1642356000"
+
+    //console.log(this._settings)
+
+    //console.log(this._isactive)
 
     this._pixelCost = this._settings.milk_price;
 
     this._rewardRate = this._settings.reward_rate;
+    //console.log(this._stats.starts_at / 1000000)
+
+    var countDownDate = new Date(this._stats.starts_at / 1000000);
+    //console.log(countDownDate)
+    var countDownDateSeconds = new Date(countDownDate.getTime() - countDownDate.getTimezoneOffset() * 60000)
+
+    var x = setInterval(function(stats) {
+
+      // Get today's date and time
+      //var now = new Date().getTime();
+      var d = new Date();
+      var dtSec = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+
+      // Find the distance between now and the count down date
+      var distance = countDownDateSeconds.getTime() - dtSec.getTime();
+      //console.log(distance)
+
+      // Time calculations for days, hours, minutes and seconds
+      var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      // Display the result in the element with id="demo"
+      var timer = document.getElementById("timer")
+
+      if(timer) {
+        timer.innerHTML = "<h2><span style='color:#222'>Starts In: </span><span style='color:rgba(80,41,254,0.88)'>" + days + "d : " + hours + "h : " + minutes + "m : " + seconds + "s" + "</span></h2>";
+      }
+      // If the count down is finished, write some text
+      //console.log(distance)
+      if (distance < 0) {
+
+        if(timer) {
+
+          // console.log(new Date(settings.end_date * 1000).getTime())
+          //console.log(stats)  
+
+          if (new Date().getTime() > new Date(stats.ends_at / 1000000).getTime()) {
+            clearInterval(x);
+            timer.innerHTML = "<h2><span style='color:rgba(80,41,254,0.88)'>Board Closed</span></h2>";
+          }
+          else if (new Date().getTime() <= new Date(stats.ends_at / 1000000).getTime()) {
+
+            var d = new Date();
+            //var dtSec = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+            //console.log(dtSec)
+
+            var countDownEndDate = new Date(stats.ends_at / 1000000);
+            //console.log(countDownEndDate)
+            //var countDownEndDateSeconds = new Date(countDownEndDate.getTime() - countDownEndDate.getTimezoneOffset() * 60000)
+
+            // Find the distance between now and the count down date
+            var distance = countDownEndDate.getTime() - d.getTime();
+            //console.log(distance)
+
+            var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            timer.innerHTML = "<h2><span style='color:#222'>Ends In: </span><span style='color:rgba(80,41,254,0.88)'>" + days + "d : " + hours + "h : " + minutes + "m : " + seconds + "s" + "</span></h2>";
+          }
+          else {
+            clearInterval(x);
+            timer.style.display = "none";
+          }
+
+        }
+      }
+    }, 1000, this._stats);
 
 
     // const freeDrawingTimestamp = await this._contract.get_free_drawing_timestamp();
@@ -1506,24 +1575,24 @@ show = (outcome) => {
         <div className={`cheddar-buttons${watchClass}`}>
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokensCheddar(3)}
+            onClick={() => this.buyTokensCheddar(24)}
           >
-            Buy <span className="font-weight-bold">10{Milk}</span> for{" "}
-            <span className="font-weight-bold">🧀&nbsp;3</span>
+            Buy <span className="font-weight-bold">75{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀&nbsp;24</span>
           </button>{" "}
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokensCheddar(30)}
+            onClick={() => this.buyTokensCheddar(240)}
           >
-            Buy <span className="font-weight-bold">100{Milk}</span> for{" "}
-            <span className="font-weight-bold">🧀&nbsp;30</span>
+            Buy <span className="font-weight-bold">750{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀&nbsp;240</span>
           </button>{" "}
           <button
             className="btn btn-primary"
-            onClick={() => this.buyTokensCheddar(600)}
+            onClick={() => this.buyTokensCheddar(2400)}
           >
-            Buy <span className="font-weight-bold">2000{Milk}</span> for{" "}
-            <span className="font-weight-bold">🧀 600</span>
+            Buy <span className="font-weight-bold">7500{Milk}</span> for{" "}
+            <span className="font-weight-bold">🧀 2400</span>
           </button>{" "}
         </div>
         <div className={`color-picker${watchClass}`}>
@@ -1675,6 +1744,7 @@ show = (outcome) => {
               </div>
             </div>
             <div className={`leaderboard${watchClass}`}>
+            <p style={{ 'fontSize': "11px", 'marginTop': "0", 'color': "#cc3300", 'text-align':"center"}}><i><b>⚠️Warning this is a GAME, with potential REWARDS<br/>Pixels can be Overwritten by other Players!</b></i></p> 
               <div>
                 <Leaderboard
                   account={this.state.account}
