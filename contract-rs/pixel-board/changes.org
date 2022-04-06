@@ -50,4 +50,7 @@ CHEDDAR=token.cheddar.near
 // https://explorer.mainnet.near.org/transactions/GTPdPCuewzZHsWnsUsFakSW9vrAfQXuuo8AEMRj8xSDg
 near deploy $CTR ./res/cheddar_draw.wasm "new" '{"cheddar": "token.cheddar.near", "admin": "cheddar.near", "treasury": "treasury.cheddar.near", "ends": "1640455200"}' --accountId $CTR --initGas=200000000000000
 near call $CHEDDAR add_minter '{"account_id":"farm-draw.cheddar.near"}' --accountId cheddar.near --depositYocto 1
+
+near view $CHEDDAR ft_balance_of '{"account_id": "'$CTR'"}'
+NEAR_ENV=mainnet near state $CHEDDAR
 #+END_SRC
