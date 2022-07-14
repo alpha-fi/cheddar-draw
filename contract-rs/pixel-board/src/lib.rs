@@ -141,6 +141,8 @@ impl Place {
     #[payable]
     pub fn buy_tokens(&mut self) {
         self.assert_active();
+        let account_id = env::predecessor_account_id();
+        assert!(!self.blacklist.contains(&account_id), "Account blacklisted");
 
         let near_amount = env::attached_deposit();
         assert!(
@@ -148,7 +150,7 @@ impl Place {
             "Min 0.1 NEAR payment is required"
         );
 
-        let mut account = self.get_mut_account(&env::predecessor_account_id());
+        let mut account = self.get_mut_account(&account_id);
         let a = account.buy_tokens(near_amount, self.milk_price);
         self.save_account(account);
         self.bought_balances[Berry::Milk as usize] += a;
@@ -156,8 +158,10 @@ impl Place {
 
     pub fn buy_milk_with_cheddar(&mut self, spent_cheddar: U128) {
         self.assert_active();
+        let account_id = env::predecessor_account_id();
+        assert!(!self.blacklist.contains(&account_id), "Account blacklisted");
 
-        let mut account = self.get_mut_account(&env::predecessor_account_id());
+        let mut account = self.get_mut_account(&account_id);
         // TODO - should create a migration and put it into a state
         let x = account
             .buy_milk_with_cheddar(spent_cheddar.into(), self.milk_price * MILK_CHEDAR_FACTOR);
@@ -167,11 +171,13 @@ impl Place {
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
         self.assert_active();
+        let account_id = env::predecessor_account_id();
+        assert!(!self.blacklist.contains(&account_id), "Account blacklisted");
 
         if pixels.is_empty() {
             return;
         }
-        let mut account = self.get_mut_account(&env::predecessor_account_id());
+        let mut account = self.get_mut_account(&account_id);
         let new_pixels = pixels.len() as u32;
         let cost = account.charge(Berry::Milk, new_pixels);
         self.used_milk += cost;
