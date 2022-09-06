@@ -28,4 +28,8 @@ pub struct Settings {
     pub reward_rate: U128,
     /// milk token price in NEAR
     pub milk_price: U128,
+    /// start timestamp in seconds
+    pub start_date: u64,
+    /// end timestamp in seconds
+    pub end_date: u64,
 }

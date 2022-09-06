@@ -65,6 +65,7 @@ pub struct Place {
     /// pixel token price in NEAR
     pub milk_price: Balance,
     pub blacklist: LookupSet<AccountId>,
+    /// time when the game starts in nanoseconds
     pub starts: u64,
     /// time when the game will finish in nanoseconds
     pub ends: u64,
@@ -125,6 +126,8 @@ impl Place {
         Settings {
             reward_rate: (self.reward_rate * 1_000_000).into(),
             milk_price: self.milk_price.into(),
+            start_date: self.starts / FROM_NANO,
+            end_date: self.ends / FROM_NANO,
         }
     }
 
