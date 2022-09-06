@@ -278,15 +278,10 @@ impl Place {
     }
 
     /// set end date in unix timestamp (seconds)
-    pub fn set_end(&mut self, ends: u64) {
-        self.only_admin();
-        self.ends = ends * FROM_NANO;
-    }
-
-    /// set end date in unix timestamp (seconds)
-    pub fn set_start(&mut self, starts: u64) {
+    pub fn set_start_end(&mut self, starts: u64, ends: u64) {
         self.only_admin();
         self.starts = starts * FROM_NANO;
+        self.ends = ends * FROM_NANO;
     }
 
     pub fn add_to_blacklist(&mut self, account: AccountId) {
