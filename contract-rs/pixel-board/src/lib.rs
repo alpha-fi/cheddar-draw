@@ -62,7 +62,8 @@ pub struct Place {
     pub mint_funded: u32,
     /// reward per pixel per nanosecond
     pub reward_rate: Balance,
-    /// pixel token price in NEAR
+    /// milk represents a price of one pixel. The milk_price is in NEAR.
+    /// if one milk = 1 cheddar, then we should set here 1e24/cheddar_price
     pub milk_price: Balance,
     pub blacklist: LookupSet<AccountId>,
     /// time when the game starts in nanoseconds
@@ -88,6 +89,7 @@ impl Place {
         ends: u64,
     ) -> Self {
         assert!(!env::state_exists(), "Already initialized");
+        // milk
         let milk_price = ONE_NEAR / 400;
         let mut place = Self {
             account_indices: LookupMap::new(b"i".to_vec()),
@@ -141,6 +143,7 @@ impl Place {
         self.account_indices.contains_key(account_id.as_ref())
     }
 
+    /// buy milk tokens with NEAR
     #[payable]
     pub fn buy_tokens(&mut self) {
         self.assert_active();
@@ -286,6 +289,7 @@ impl Place {
     /// set end date in unix timestamp (seconds)
     pub fn set_start_end(&mut self, starts: u64, ends: u64) {
         self.only_admin();
+        assert!(starts < ends, "start must be before end");
         self.starts = starts * FROM_NANO;
         self.ends = ends * FROM_NANO;
     }
