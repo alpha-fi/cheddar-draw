@@ -273,13 +273,17 @@ impl FungibleTokenReceiver for Place {
         msg: String,
     ) -> PromiseOrValue<U128> {
         self.assert_active();
+
         let token = env::predecessor_account_id();
         assert!(
             token == self.cheddar,
             "Only cheddar token transfers are accepted",
         );
         assert!(amount.0 > 0, "amount must be positive");
+        
         let sender_id: &AccountId = sender_id.as_ref();
+        assert!(!self.blacklist.contains(&sender_id.clone()), "Account blacklisted");
+
         let mut a = self.get_internal_account_by_id(sender_id).unwrap();
         a.balances[Berry::Cheddar as usize] += amount.0;
         self.save_account(a);
