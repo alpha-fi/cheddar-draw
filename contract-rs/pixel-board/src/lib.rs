@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::convert::TryInto;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, LookupSet};
@@ -312,7 +313,18 @@ impl Place {
     /// removes all board rows and cols)
     pub fn delete_board(&mut self) {
         self.only_admin();
+        self.ends = env::block_timestamp();
+        self.is_active = false;
+
         self.board.lines.clear();
+        let default_line = PixelLine::default();
+        for _ in 0..BOARD_HEIGHT {
+            self.board.lines.push(&default_line);
+        }
+        let mut a = self.get_internal_account_by_index(0).unwrap();
+        self.touch(&mut a);
+        a.num_pixels = TOTAL_NUM_PIXELS;
+        self.save_account(a);
     }
 
     /// Resets the board state.
