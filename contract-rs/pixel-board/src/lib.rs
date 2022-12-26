@@ -1,11 +1,10 @@
 use std::collections::HashSet;
-use std::convert::TryInto;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, LookupSet};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, Gas, Promise};
+use near_sdk::{env, log, near_bindgen, AccountId, Balance, Gas, Promise};
 
 const FROM_NANO: u64 = 1_000_000_000;
 
@@ -261,6 +260,7 @@ impl Place {
             return 0.into();
         }
         let liquid_balance = account_balance - locked_for_storage;
+        log!("withdrawing treasury {} {}", liquid_balance, &self.treasury);
         Promise::new(self.treasury.clone()).transfer(liquid_balance);
         return liquid_balance.into();
     }
